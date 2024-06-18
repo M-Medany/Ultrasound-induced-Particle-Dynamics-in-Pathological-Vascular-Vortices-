@@ -1,5 +1,5 @@
 import cv2
-from tracker import *
+from Manual_traking import *
 import random
 
 tracker = EuclideanDistTracker()
