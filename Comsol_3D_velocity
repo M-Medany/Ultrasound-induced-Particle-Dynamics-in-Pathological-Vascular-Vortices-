@@ -1,0 +1,82 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.interpolate import griddata
+from mpl_toolkits.mplot3d import Axes3D
+
+def read_and_plot_data(file_path, skip_interval=10, scale_factor=0.1, max_velocity=0.001):
+    try:
+        # Load data
+        data = pd.read_csv(file_path)
+
+        # Clean column names if necessary
+        data.columns = data.columns.str.strip()
+
+        # Extract data for plotting
+        X = data['x'].values
+        Y = data['y'].values
+        U = data['u'].values
+        V = data['v'].values
+
+        # Skipping data points to reduce density
+        X_skipped = X[::skip_interval]
+        Y_skipped = Y[::skip_interval]
+        U_skipped = U[::skip_interval]
+        V_skipped = V[::skip_interval]
+
+        # Calculate magnitudes
+        magnitudes = np.sqrt(U_skipped**2 + V_skipped**2)
+
+        # Filter out points with magnitudes above max_velocity
+        mask = magnitudes <= max_velocity
+        X_filtered = X_skipped[mask]
+        Y_filtered = Y_skipped[mask]
+        U_filtered = U_skipped[mask]
+        V_filtered = V_skipped[mask]
+        magnitudes_filtered = magnitudes[mask]
+
+        # Avoid division by zero by adding a small number to magnitudes
+        magnitudes_filtered = np.where(magnitudes_filtered == 0, 1e-10, magnitudes_filtered)
+
+        # Create a regular grid for interpolation
+        grid_x, grid_y = np.mgrid[X_filtered.min():X_filtered.max():500j, Y_filtered.min():Y_filtered.max():500j]
+        grid_z = griddata((X_filtered, Y_filtered), magnitudes_filtered, (grid_x, grid_y), method='cubic')
+
+        # Normalize magnitudes for coloring
+        norm = plt.Normalize(magnitudes_filtered.min(), magnitudes_filtered.max())
+        colors = plt.cm.viridis(norm(magnitudes_filtered))
+
+        # Create the plot
+        fig = plt.figure(figsize=(12, 8))
+        ax = fig.add_subplot(111, projection='3d')
+
+        # Create a surface plot to show interpolated velocity magnitudes
+        surf = ax.plot_surface(grid_x, grid_y, grid_z, cmap='viridis', edgecolor='none', alpha=0.7)
+
+        # Plot velocity vectors in the z=0 plane
+        ax.quiver(X_filtered, Y_filtered, np.zeros_like(X_filtered), U_filtered, V_filtered, np.zeros_like(X_filtered), color=colors, length=scale_factor, alpha=0.7)
+
+        # Set labels and title
+        ax.set_xlabel('X Coordinate')
+        ax.set_ylabel('Y Coordinate')
+        ax.set_zlabel('Velocity Magnitude')
+        ax.set_title('3D Velocity Field with Gradient Descent Visualization')
+
+        # Add color bar
+        mappable = plt.cm.ScalarMappable(norm=norm, cmap='viridis')
+        mappable.set_array(magnitudes_filtered)
+        cbar = fig.colorbar(mappable, ax=ax)
+        cbar.set_label('Velocity Magnitude')
+
+        plt.show()
+
+    except FileNotFoundError:
+        print(f"Error: The file at {file_path} was not found.")
+    except KeyError as e:
+        print(f"Error: Missing expected column in the CSV file - {e}")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+
+# Example usage
+file_path = r'C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Normalized_Velocity_2d_5cm.csv'  # Use a raw string for Windows paths
+read_and_plot_data(file_path)
