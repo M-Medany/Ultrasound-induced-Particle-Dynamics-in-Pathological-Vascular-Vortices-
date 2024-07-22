@@ -3,19 +3,19 @@ import numpy as np
 from scipy.integrate import solve_ivp
 from scipy.spatial import cKDTree
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 from multiprocessing import Pool, cpu_count
-from tqdm import tqdm
 
 # Constants
 Gamma = 10
 rho = 1000
 a = 50
-CD = 1.5
+CD = 1.2
 p_inf = 1e5
 
 # Read velocity data from CSV
 print("Reading velocity data from CSV...")
-velocity_data = pd.read_csv(r'C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Normalized_Velocity_2d_5cm.csv')
+velocity_data = pd.read_csv(r'C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Excel_data_velocity_comsol\Normalized_Velocity_2d_5cm.csv')
 
 # Clean column names if necessary
 velocity_data.columns = velocity_data.columns.str.strip()
@@ -69,7 +69,7 @@ def microbubble_dynamics(t, Y, tree, u_values, v_values):
     return [dxdt, dydt, du_MBx_dt, du_MBy_dt]
 
 # Initial conditions
-x0 = [100, 100]
+x0 = [130, 50]
 u_MB0 = [0, 0]
 initial_conditions = x0 + u_MB0
 
@@ -109,6 +109,37 @@ if __name__ == '__main__':
             final_y.append(y)
 
     final_y = np.concatenate(final_y, axis=1)
+
+    # Ensure the final_y is correctly processed
+    final_y = np.array(final_y)
+
+    # Create a figure for the animation
+    fig, ax = plt.subplots()
+    line, = ax.plot([], [], 'k-', linewidth=2)  # Changed line color to black ('k-')
+    start_point, = ax.plot([], [], 'go', markerfacecolor='g', markersize=8)
+    end_point, = ax.plot([], [], 'ro', markerfacecolor='r', markersize=8)
+
+    # Set axis limits
+    ax.set_xlim(velocity_data['x'].min(), velocity_data['x'].max())
+    ax.set_ylim(velocity_data['y'].min(), velocity_data['y'].max())
+
+    def init():
+        line.set_data([], [])
+        start_point.set_data([final_y[0, 0]], [final_y[1, 0]])  # Start point
+        end_point.set_data([], [])  # Clear end point initially
+        return line, start_point, end_point
+
+    def update(frame):
+        line.set_data(final_y[0, :frame], final_y[1, :frame])
+        end_point.set_data([final_y[0, frame - 1]], [final_y[1, frame - 1]])  # Update end point
+        return line, start_point, end_point
+
+    ani = animation.FuncAnimation(fig, update, frames=len(final_t), init_func=init, blit=True)
+
+    # Save the animation using Pillow
+    ani.save('trajectory_animation.gif', fps=30, writer='pillow')
+
+    plt.show()
 
     # Plotting results
     plt.figure(figsize=(10, 5))
