@@ -10,10 +10,7 @@ Understanding the dynamics of micro and nanoparticles in disturbed flow profiles
 
 When MBs are injected into disturbed flow and ultrasound is activated, they become trapped at the vortex's eye. They attract other MBs from the flow due to ultrasound-induced attractive forces.
 
-<video width="600" controls>
-  <source src="videos/Bubblu_vortex_20fps.avi" type="video/avi">
-  Your browser does not support the video tag.
-</video>
+![Microbubble Trapping] (C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Videos\Bubblu_vortex_20fps.gif)
 
 ### Cluster Formation and Ejection
 
@@ -79,6 +76,8 @@ $$
 This equation can be solved to determine the bubble position over time if the initial coordinates are known.
 
 ## Implementation and Visualization
+![Microbubble Trapping] (C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Videos\trajectory_animation_black.gif)
+
 
 ### Python Scripts
 
@@ -90,6 +89,7 @@ Our GitHub repository includes Python scripts that:
 ### Visualization
 
 The plots illustrate the trajectories of single and multiple microbubbles in disturbed flow environments, providing insights into their behavior under ultrasound.
+![Microbubble Trapping] (C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Videos\swarm_traj-ezgif.com-optimize.gif)
 
 ## Conclusion
 
