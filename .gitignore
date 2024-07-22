@@ -10,6 +10,7 @@ output_images_viridis
 Swarm_trajectory
 Solar_results
 Animation
+Swarm_trajectory_viridis
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

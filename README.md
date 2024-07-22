@@ -10,6 +10,11 @@ Understanding the dynamics of micro and nanoparticles in disturbed flow profiles
 
 When MBs are injected into disturbed flow and ultrasound is activated, they become trapped at the vortex's eye. They attract other MBs from the flow due to ultrasound-induced attractive forces.
 
+<video width="600" controls>
+  <source src="videos/Bubblu_vortex_20fps.avi" type="video/avi">
+  Your browser does not support the video tag.
+</video>
+
 ### Cluster Formation and Ejection
 
 Once the MB cluster reaches a critical size, it is ejected from the vortex and migrates to the wall opposite the piezo transducer, where it continues to attract and cluster MBs, filling the aneurysm cavity.
@@ -30,46 +35,46 @@ The behavior of MBs under disturbed flow and ultrasound is governed by the follo
 
 #### Microbubble Position and Velocity
 
-\[
+$$
 \frac{dx}{dt} = u_{MB}
-\]
+$$
 
-\[
+$$
 \frac{du_{MB}}{dt} = \frac{3}{\rho} \nabla p + \frac{3}{4} C_D (u - u_{MB}) |u - u_{MB}|
-\]
+$$
 
-where \(C_D\) is the drag coefficient, \(p\) is the pressure field, \(x\) is the microbubble position, and \(u_{MB}\) is its velocity.
+where \( C_D \) is the drag coefficient, \( p \) is the pressure field, \( x \) is the microbubble position, and \( u_{MB} \) is its velocity.
 
 #### Vortex Velocity Field
 
-\[
+$$
 u = 
 \begin{cases} 
 -u_{\theta} \sin \theta, u_{\theta} \cos \theta \\
 u_{\theta} = \frac{\Gamma}{2 \pi} \frac{r}{a^2}, & \text{when } r < a \\
 u_{\theta} = \frac{\Gamma}{2 \pi} \frac{1}{r}, & \text{when } r > a 
 \end{cases}
-\]
+$$
 
-with \(\sin \theta = \frac{y}{r}\), \(\cos \theta = \frac{x}{r}\), and \(r = \sqrt{x^2 + y^2}\), and \(a\) is the radius of the vortex core.
+with \( \sin \theta = \frac{y}{r} \), \( \cos \theta = \frac{x}{r} \), and \( r = \sqrt{x^2 + y^2} \), and \( a \) is the radius of the vortex core.
 
 #### Pressure Field
 
-\[
+$$
 p = 
 \begin{cases} 
 p_{\infty} - \frac{\Gamma^2}{4 \pi^2} \frac{\rho}{a^2} + \frac{\rho \Gamma^2}{8 \pi^2} \frac{r^2}{a^2}, & \text{when } r < a \\
 p_{\infty} - \frac{\Gamma^2}{8 \pi^2} \frac{\rho}{r^2}, & \text{when } r > a 
 \end{cases}
-\]
+$$
 
 ### Combined Equation
 
 Combining the first two equations results in a second-order partial differential equation:
 
-\[
+$$
 \frac{d^2 x}{dt^2} + a \frac{dx}{dt} + bx = cu
-\]
+$$
 
 This equation can be solved to determine the bubble position over time if the initial coordinates are known.
 
