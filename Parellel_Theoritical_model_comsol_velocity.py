@@ -15,7 +15,7 @@ p_inf = 1e5
 
 # Read velocity data from CSV
 print("Reading velocity data from CSV...")
-velocity_data = pd.read_csv(r'C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Excel_data_velocity_comsol\Normalized_Velocity_2d_5cm.csv')
+velocity_data = pd.read_csv(r'C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Excel_data_velocity_comsol\Normalized_60_cm.csv')
 
 # Clean column names if necessary
 velocity_data.columns = velocity_data.columns.str.strip()

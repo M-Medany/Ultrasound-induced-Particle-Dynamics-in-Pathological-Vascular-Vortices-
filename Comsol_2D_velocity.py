@@ -2,7 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-def read_and_plot_data(file_path, skip_interval=10, scale_factor=30):
+def read_and_plot_data(file_path, skip_interval=1, scale_factor=40):
     try:
         # Load data
         data = pd.read_csv(file_path)
@@ -16,6 +16,13 @@ def read_and_plot_data(file_path, skip_interval=10, scale_factor=30):
         U = data['u'].values
         V = data['v'].values
 
+        # Convert x and y to micrometers
+        data['x'] *= 1e6
+        data['y'] *= 1e6
+
+        # Convert velocity to cm/s
+        data['u'] *= 100
+        data['v'] *= 100
         # Skipping data points to reduce density
         X_skipped = X[::skip_interval]
         Y_skipped = Y[::skip_interval]
@@ -56,7 +63,7 @@ def read_and_plot_data(file_path, skip_interval=10, scale_factor=30):
 
 # Example usage
 # file_path = r'C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Velocity_2d_5cm.csv'  # Use a raw string for Windows paths
-file_path = r'C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Excel_data_velocity_comsol\Normalized_Velocity_2d_5cm.csv'  # Use a raw string for Windows paths
+file_path = r'C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Excel_data_velocity_comsol\Normalized_60_cm.csv'  # Use a raw string for Windows paths
 # file_path = r'C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Normalized_Velocity_2d_5cm.csv'  # Use a raw string for Windows paths
 
 

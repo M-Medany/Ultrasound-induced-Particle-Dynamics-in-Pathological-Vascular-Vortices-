@@ -8,13 +8,18 @@ import matplotlib.pyplot as plt
 Gamma = 10  # 6.5
 rho = 1000
 a = 50
-CD = 1.5 # 1.0
+CD = 1.1 # 1.0
 p_inf = 1e5
 
 # Read velocity data from CSV
 print("Reading velocity data from CSV...")
-velocity_data = pd.read_csv(r'C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Excel_data_velocity_comsol\Normalized_Velocity_2d_5cm.csv')
+velocity_data = pd.read_csv(r'C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Excel_data_velocity_comsol\Normalized_60_cm.csv')
+velocity_data['x'] *= 1e6
+velocity_data['y'] *= 1e6
 
+# Convert velocity to cm/s
+velocity_data['u'] *= 1
+velocity_data['v'] *= 1
 # Clean column names if necessary
 velocity_data.columns = velocity_data.columns.str.strip()
 print(f"Columns in the data: {velocity_data.columns.tolist()}")
@@ -23,6 +28,9 @@ print(f"Columns in the data: {velocity_data.columns.tolist()}")
 points = velocity_data[['x', 'y']].values
 u_values = velocity_data['u'].values
 v_values = velocity_data['v'].values
+
+
+
 print(f"Loaded {len(points)} points for interpolation.")
 
 # Build a KDTree for fast interpolation
@@ -74,7 +82,7 @@ def microbubble_dynamics(t, Y):
     return [dxdt, dydt, du_MBx_dt, du_MBy_dt]
 
 # Initial conditions
-x0 = [100, 50] # Adjusted initial conditions
+x0 = [130, 150] # Adjusted initial conditions
 u_MB0 = [0, 0]
 initial_conditions = x0 + u_MB0  # Combine lists
 

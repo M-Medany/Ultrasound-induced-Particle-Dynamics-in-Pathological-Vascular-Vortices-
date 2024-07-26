@@ -27,6 +27,10 @@ def read_and_plot_data_2d(file_path, skip_interval=2, scale_factor=70):
         data['x'] *= 1e6
         data['y'] *= 1e6
 
+        # Convert velocity to cm/s
+        data['u2'] *= 100
+        data['v2'] *= 100
+
         # Extract data for plotting
         X = data['x'].values
         Y = data['y'].values
@@ -39,16 +43,15 @@ def read_and_plot_data_2d(file_path, skip_interval=2, scale_factor=70):
         U_skipped = U[::skip_interval]
         V_skipped = V[::skip_interval]
 
-        # Calculate magnitudes for normalization
+        # Calculate magnitudes for coloring
         magnitudes = np.sqrt(U_skipped**2 + V_skipped**2)
 
-        # Avoid division by zero by adding a small number to magnitudes
-        magnitudes = np.where(magnitudes == 0, 1e-10, magnitudes)
+        # Normalize direction vectors for consistent arrow length
+        magnitudes_non_zero = np.where(magnitudes == 0, 1e-10, magnitudes)
+        U_normalized = U_skipped / magnitudes_non_zero
+        V_normalized = V_skipped / magnitudes_non_zero
 
-        U_normalized = U_skipped / magnitudes
-        V_normalized = V_skipped / magnitudes
-
-        # Normalize magnitudes for coloring
+        # Use the original magnitudes for coloring
         norm = plt.Normalize(magnitudes.min(), magnitudes.max())
         colors = plt.cm.viridis(norm(magnitudes))
 
@@ -56,7 +59,7 @@ def read_and_plot_data_2d(file_path, skip_interval=2, scale_factor=70):
         fig, ax = plt.subplots(figsize=(8, 6), dpi=300)
         quiver = ax.quiver(X_skipped, Y_skipped, U_normalized, V_normalized, color=colors, scale=scale_factor)
         cbar = fig.colorbar(plt.cm.ScalarMappable(norm=norm, cmap='viridis'), ax=ax)
-        cbar.set_label('Velocity Magnitude')
+        cbar.set_label('Velocity Magnitude (cm/s)')
         ax.set_title('2D Velocity Vector Plot with Minimized Arrows')
         ax.set_xlabel('X Coordinate (micrometers)')
         ax.set_ylabel('Y Coordinate (micrometers)')
@@ -72,5 +75,5 @@ def read_and_plot_data_2d(file_path, skip_interval=2, scale_factor=70):
         print(f"An unexpected error occurred: {e}")
 
 # Example usage
-file_path = r'C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Excel_data_velocity_comsol\Normalized_Velocity_60_cm_Full.csv'  # Use a raw string for Windows paths
+file_path = r'C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Excel_data_velocity_comsol\Velocity_60_cm_Full_scaled.csv'  # Use the provided file path
 read_and_plot_data_2d(file_path)
