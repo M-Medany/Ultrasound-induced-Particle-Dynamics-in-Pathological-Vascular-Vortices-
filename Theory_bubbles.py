@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 # Constants
 Gamma = 4.0 #6.5
 rho = 1000
-a = 0.05
+a = 1
 CD = 100 # 1.0
 p_inf = 1e5
 
@@ -54,7 +54,7 @@ u_MB0 = [0, 0]
 initial_conditions = x0 + u_MB0  # Combine lists
 
 # Time span for the simulation
-t_span = [0, 100]
+t_span = [0, 45]
 
 # Solve the ODE
 solution = solve_ivp(microbubble_dynamics, [t_span[0], t_span[1]], initial_conditions, method='RK45', dense_output=True)

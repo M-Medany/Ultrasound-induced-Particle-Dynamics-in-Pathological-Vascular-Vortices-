@@ -39,7 +39,7 @@ def read_and_plot_data(file_path, skip_interval=10, scale_factor=0.1, max_veloci
         magnitudes_filtered = np.where(magnitudes_filtered == 0, 1e-10, magnitudes_filtered)
 
         # Create a regular grid for interpolation
-        grid_x, grid_y = np.mgrid[X_filtered.min():X_filtered.max():500j, Y_filtered.min():Y_filtered.max():500j]
+        grid_x, grid_y = np.mgrid[X_filtered.min():X_filtered.max():1000j, Y_filtered.min():Y_filtered.max():1000j]
         grid_z = griddata((X_filtered, Y_filtered), magnitudes_filtered, (grid_x, grid_y), method='cubic')
 
         # Normalize magnitudes for coloring
@@ -51,10 +51,10 @@ def read_and_plot_data(file_path, skip_interval=10, scale_factor=0.1, max_veloci
         ax = fig.add_subplot(111, projection='3d')
 
         # Create a surface plot to show interpolated velocity magnitudes
-        surf = ax.plot_surface(grid_x, grid_y, grid_z, cmap='viridis', edgecolor='none', alpha=0.7)
+        surf = ax.plot_surface(grid_x, grid_y, grid_z, cmap='jet', edgecolor='black', alpha=0.9)
 
         # Plot velocity vectors in the z=0 plane
-        ax.quiver(X_filtered, Y_filtered, np.zeros_like(X_filtered), U_filtered, V_filtered, np.zeros_like(X_filtered), color=colors, length=scale_factor, alpha=0.7)
+        ax.quiver(X_filtered, Y_filtered, np.zeros_like(X_filtered), U_filtered, V_filtered, np.zeros_like(X_filtered), color=colors, length=scale_factor, alpha=0.5)
 
         # Set labels and title
         ax.set_xlabel('X Coordinate')
@@ -63,7 +63,7 @@ def read_and_plot_data(file_path, skip_interval=10, scale_factor=0.1, max_veloci
         ax.set_title('3D Velocity Field with Gradient Descent Visualization')
 
         # Add color bar
-        mappable = plt.cm.ScalarMappable(norm=norm, cmap='viridis')
+        mappable = plt.cm.ScalarMappable(norm=norm, cmap='jet')
         mappable.set_array(magnitudes_filtered)
         cbar = fig.colorbar(mappable, ax=ax)
         cbar.set_label('Velocity Magnitude')
@@ -78,5 +78,7 @@ def read_and_plot_data(file_path, skip_interval=10, scale_factor=0.1, max_veloci
         print(f"An unexpected error occurred: {e}")
 
 # Example usage
-file_path = r'C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Excel_data_velocity_comsol\Normalized_Velocity_2d_5cm.csv'  # Use a raw string for Windows paths
+file_path = r'C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Excel_data_velocity_comsol\Normalized_60_cm.csv'  # Use a raw string for Windows paths
+
+# file_path = r'C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Excel_data_velocity_comsol\Normalized_Velocity_2d_5cm.csv'  # Use a raw string for Windows paths
 read_and_plot_data(file_path)

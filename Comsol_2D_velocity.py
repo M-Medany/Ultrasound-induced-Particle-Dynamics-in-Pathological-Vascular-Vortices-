@@ -2,7 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-def read_and_plot_data(file_path, skip_interval=1, scale_factor=40):
+def read_and_plot_data(file_path, skip_interval=1, scale_factor=80):
     try:
         # Load data
         data = pd.read_csv(file_path)
