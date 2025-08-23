@@ -4,13 +4,12 @@
 /literature
 
 #ignor folder
-output_images
-output_images_jet
-output_images_viridis
+output_images*
 Swarm_trajectory
 Solar_results
 Animation
 Swarm_trajectory_viridis
+
 __pycache__
 # Byte-compiled / optimized / DLL files
 __pycache__/
