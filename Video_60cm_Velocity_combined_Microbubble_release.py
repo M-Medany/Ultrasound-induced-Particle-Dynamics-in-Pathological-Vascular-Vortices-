@@ -9,7 +9,7 @@ from multiprocessing import Pool, cpu_count
 # Constants
 Gamma = 3
 rho = 1000
-a = 20
+a = 0.002
 CD = 1.5
 p_inf = 1e5
 
@@ -20,8 +20,8 @@ if not os.path.exists(output_dir):
 
 # Read velocity data from CSV
 print("Reading velocity data from CSV...")
-velocity_data = pd.read_csv(r'C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Excel_data_velocity_comsol\Normalized_60_cm.csv')
-
+velocity_data = pd.read_csv(r'C:\Users\M4\VSCode_Projects\Ultrasound-Swarm-Microbubbles-Navigating-Vortices-to-Target-and-Fill-Aneurysms\Excel_data_velocity_comsol\Normalized_60_cm.csv')
+# C:\Users\M4\VSCode_Projects\Ultrasound-Swarm-Microbubbles-Navigating-Vortices-to-Target-and-Fill-Aneurysms\Excel_data_velocity_comsol
 # Clean column names if necessary
 velocity_data.columns = velocity_data.columns.str.strip()
 print(f"Columns in the data: {velocity_data.columns.tolist()}")
@@ -74,7 +74,7 @@ def microbubble_dynamics(t, Y, tree, u_values, v_values):
     return [dxdt, dydt, du_MBx_dt, du_MBy_dt]
 
 # Initial conditions
-x0 = [50, 105]
+x0 = [70, 150]
 u_MB0 = [0, 0]
 initial_conditions = x0 + u_MB0
 
@@ -202,7 +202,10 @@ if __name__ == '__main__':
             print(f"An unexpected error occurred: {e}")
 
     # Example usage
-    file_path = r'C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Excel_data_velocity_comsol\Normalized_60_cm.csv'
+    # file_path = r'C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Excel_data_velocity_comsol\Normalized_60_cm.csv'
+    file_path = r'C:\Users\M4\VSCode_Projects\Ultrasound-Swarm-Microbubbles-Navigating-Vortices-to-Target-and-Fill-Aneurysms\Excel_data_velocity_comsol\Normalized_60_cm.csv'
+    
+    
     read_and_plot_data(file_path, frame_interval=20)  # Save every 20th frame
 
     # To create a video from the images using ffmpeg:

@@ -127,5 +127,4 @@ plt.xlabel('X Position (m)')
 plt.ylabel('Y Position (m)')
 plt.grid(True, alpha=0.3)
 plt.axis('equal')
-
 plt.show()
