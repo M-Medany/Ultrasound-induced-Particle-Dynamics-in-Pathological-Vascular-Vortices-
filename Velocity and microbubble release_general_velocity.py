@@ -11,7 +11,7 @@ from multiprocessing import get_context, cpu_count
 CSV_PATH = r"C:\Users\M4\VSCode_Projects\Ultrasound-Swarm-Microbubbles-Navigating-Vortices-to-Target-and-Fill-Aneurysms\Excel_data_velocity_comsol\Velocity_2d_5cm.csv"
 
 rho = 1000.0
-CD  = 1
+CD  = 3
 Gamma = 0.95    # circulation (in your CSV units)
 a_override = 15     # e.g. set 80.0 if you want to force a (same units as CSV)
 CENTER_OVERRIDE = None # e.g. (3835.0, 335.0) to force the center (CSV units)

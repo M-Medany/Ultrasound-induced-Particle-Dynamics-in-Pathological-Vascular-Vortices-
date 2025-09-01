@@ -9,10 +9,11 @@ from scipy.spatial import cKDTree
 CSV_PATH = r"C:\Users\M4\VSCode_Projects\Ultrasound-Swarm-Microbubbles-Navigating-Vortices-to-Target-and-Fill-Aneurysms\Excel_data_velocity_comsol\Normalized_60_cm.csv"
 
 rho   = 1000.0
-CD    = 1.5
-Gamma = 0.5            # circulation used only in Rankine pressure
-a_override = None      # e.g. 8.7e-05 (meters) to force core radius
-CENTER_OVERRIDE = None # e.g. (2.505e-4, 1.731e-4) to force center
+CD    = 1000000000000
+Gamma = 0.00002            # circulation used only in Rankine pressure
+a_override = 50e-6      # e.g. 8.7e-05 (meters) to force core radius
+CENTER_OVERRIDE = (1.2e-4, 1.531e-4) # e.g. (2.505e-4, 1.731e-4) to force center
+
 
 # Initial MB position (you can type microns here; auto-converted to meters)
 x0_um, y0_um = 70.0, 150.0

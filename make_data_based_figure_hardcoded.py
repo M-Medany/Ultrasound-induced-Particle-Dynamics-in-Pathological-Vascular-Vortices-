@@ -5,16 +5,9 @@
 # Panel A: measured velocity (quiver/stream) + bubble trajectory + core circle
 # Panel B: analytic Rankine pressure centered at estimated vortex center
 #
-# HOW TO USE (VS Code / double-click):
-#   - Set the paths and parameters in the "USER INPUT" block below
-#   - Run the script (no command-line arguments needed)
-#
 # OUTPUT:
-#   - fig_data.png and fig_data.svg (or whatever you set in outbase)
-#
-# INPUTS:
-#   - Velocity CSV with columns: x, y, u, v
-#   - Trajectory CSV with columns: x, y (and optionally t)
+#   - <outbase>_panelA.png/.svg, <outbase>_panelB.png/.svg
+#   - (optional) <outbase>_combined.png/.svg
 
 import os
 import sys
@@ -23,20 +16,40 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.spatial import cKDTree
 
-
 # ======================== USER INPUT ========================
-CSV_PATH  = r"C:\Users\M4\VSCode_Projects\Ultrasound-Swarm-Microbubbles-Navigating-Vortices-to-Target-and-Fill-Aneurysms\Excel_data_velocity_comsol\Velocity_2d_5cm.csv"
-TRAJ_PATH = r"C:\Users\M4\VSCode_Projects\Ultrasound-Swarm-Microbubbles-Navigating-Vortices-to-Target-and-Fill-Aneurysms\trajectory.csv"
+CSV_PATH   = r"C:\Users\M4\VSCode_Projects\Ultrasound-Swarm-Microbubbles-Navigating-Vortices-to-Target-and-Fill-Aneurysms\Excel_data_velocity_comsol\Velocity_2d_5cm.csv"
+TRAJ_PATH  = r"C:\Users\M4\VSCode_Projects\Ultrasound-Swarm-Microbubbles-Navigating-Vortices-to-Target-and-Fill-Aneurysms\trajectory.csv"
 
 GAMMA      = 0.95       # Circulation Γ (same units as your CSV)
 RHO        = 1000.0     # Fluid density
 A_OVERRIDE = 15         # Core radius a. Set to None to auto-estimate from data
 
-OUTBASE    = "fig_data" # Output file basename (png and svg will be created)
-GRID_N     = 120        # Interpolation resolution (higher = smoother/slower)
-USE_STREAM = False      # True: streamplot (pretty, slower). False: quiver arrows
+OUTBASE         = "fig_data"    # Base name; files get _panelA/_panelB/_combined suffixes
+OUT_DPI         = 300           # Output DPI for PNGs
+GRID_N          = 120           # Interpolation resolution
+USE_STREAM      = False         # True: streamplot; False: quiver
+SAVE_COMBINED   = True          # Also save the original 2-panel combined figure
+
+# Global font / style (Arial + larger axis tick labels)
+FONT_BASE       = 18
+TITLE_SIZE      = 18
+LABEL_SIZE      = 24
+TICK_SIZE       = 20
+LEGEND_SIZE     = 18
+# Increase x and y label font size and set font to Arial
+# LABEL_SIZE      = 20  # Increased from 16
 # ====================== END USER INPUT ======================
 
+# --------- global matplotlib font + size (force Arial) ----------
+plt.rcParams.update({
+    "font.family": "Arial",
+    "font.size": FONT_BASE,
+    "axes.titlesize": TITLE_SIZE,
+    "axes.labelsize": LABEL_SIZE,
+    "xtick.labelsize": TICK_SIZE,
+    "ytick.labelsize": TICK_SIZE,
+    "legend.fontsize": LEGEND_SIZE,
+})
 
 def estimate_vortex_center(df: pd.DataFrame):
     X = df["x"].to_numpy(float)
@@ -81,7 +94,6 @@ def estimate_vortex_center(df: pd.DataFrame):
 
     return float(best_xy[0]), float(best_xy[1])
 
-
 def infer_core_radius(df: pd.DataFrame, xc: float, yc: float) -> float:
     X = df["x"].to_numpy(float)
     Y = df["y"].to_numpy(float)
@@ -96,7 +108,6 @@ def infer_core_radius(df: pd.DataFrame, xc: float, yc: float) -> float:
     else:
         r_peak = np.median(r)
     return float(r_peak)
-
 
 def idw_grid(df: pd.DataFrame, gx: np.ndarray, gy: np.ndarray, k: int = 8):
     """Inverse-distance weighted interpolation of u,v onto a regular grid."""
@@ -115,7 +126,6 @@ def idw_grid(df: pd.DataFrame, gx: np.ndarray, gy: np.ndarray, k: int = 8):
     Vg = (w * V[idx]).sum(axis=1).reshape(Xg.shape)
     return Xg, Yg, Ug, Vg
 
-
 def rankine_pressure(Gamma: float, a: float, rho: float,
                      X: np.ndarray, Y: np.ndarray, xc: float, yc: float):
     """Rankine-consistent pressure (low in the core)."""
@@ -126,19 +136,59 @@ def rankine_pressure(Gamma: float, a: float, rho: float,
                  -(rho*Gamma**2)/(8*np.pi**2)*(1/r**2))
     return p
 
+def plot_panel_A(ax, Xg, Yg, Ug, Vg, tx, ty, xc, yc, a, xmin, xmax, ymin, ymax, use_stream):
+    speed = np.hypot(Ug, Vg)
+    if use_stream:
+        ax.streamplot(Xg, Yg, Ug, Vg, color=speed, density=1.4, linewidth=1.0)
+    else:
+        mags = speed + 1e-12
+        Un = Ug/mags; Vn = Vg/mags
+        ax.quiver(Xg[::3,::3], Yg[::3,::3], Un[::3,::3], Vn[::3,::3],
+                  speed[::3,::3], angles='xy', scale=25, alpha=0.9)
+
+    ax.plot(tx, ty, '-', lw=2, label='MB trajectory')
+    ax.plot(tx[0], ty[0], 'o', ms=6, label='start')
+    ax.plot(tx[-1], ty[-1], 'o', ms=6, label='end')
+    ax.add_patch(plt.Circle((xc, yc), a, fill=False, lw=2))
+    ax.set_aspect('equal', 'box')
+    ax.set_xlim(xmin, xmax)
+    ax.set_ylim(ymin, ymax)
+    ax.grid(alpha=0.25)
+    # ax.set_title('Measured velocity + MB trajectory', fontfamily="Arial")
+    ax.set_xlabel('x', fontfamily="Arial")
+    ax.set_ylabel('y', fontfamily="Arial")
+    leg = ax.legend(loc='upper right', frameon=False)
+    for txt in leg.get_texts():
+        txt.set_fontfamily("Arial")
+        txt.set_fontsize(LEGEND_SIZE)
+
+def plot_panel_B(ax, Xg, Yg, gamma, a, rho, xc, yc, tx, ty, xmin, xmax, ymin, ymax):
+    p = rankine_pressure(gamma, a, rho, Xg, Yg, xc, yc)
+    ax.contourf(Xg, Yg, p, levels=40)
+    ax.plot(tx, ty, 'w-', lw=2)
+    ax.plot(tx[0], ty[0], 'wo', ms=6)
+    ax.plot(tx[-1], ty[-1], 'wo', ms=6)
+    ax.add_patch(plt.Circle((xc, yc), a, color='w', fill=False, lw=2))
+    xr = Xg - xc; yr = Yg - yc; rr = np.sqrt(xr**2 + yr**2) + 1e-12
+    ax.quiver(Xg[::8,::8], Yg[::8,::8], -xr[::8,::8]/rr[::8,::8], -yr[::8,::8]/rr[::8,::8],
+              alpha=0.7, scale=20, width=0.004)
+    ax.set_aspect('equal', 'box')
+    ax.set_xlim(xmin, xmax)
+    ax.set_ylim(ymin, ymax)
+    ax.grid(alpha=0.25)
+    # ax.set_title('Analytic pressure (Rankine) + trajectory', fontfamily="Arial")
+    ax.set_xlabel('x', fontfamily="Arial")
+    ax.set_ylabel('y', fontfamily="Arial")
 
 def main(csv_path: str, traj_path: str, gamma: float, rho: float,
-         a_override, outbase: str, grid_N: int, use_stream: bool):
+         a_override, outbase: str, grid_N: int, use_stream: bool,
+         save_combined: bool, out_dpi: int):
 
-    # Sanity checks
-    if not os.path.isfile(csv_path):
-        print(f"[ERROR] Velocity CSV not found:\n  {csv_path}")
-        sys.exit(1)
-    if not os.path.isfile(traj_path):
-        print(f"[ERROR] Trajectory CSV not found:\n  {traj_path}")
+    # Load velocity field
+    if not os.path.isfile(csv_path) or not os.path.isfile(traj_path):
+        print("[ERROR] Missing CSV file(s).")
         sys.exit(1)
 
-    # Load data
     df = pd.read_csv(csv_path)
     df.columns = df.columns.str.strip()
     if not {'x','y','u','v'} <= set(df.columns):
@@ -148,78 +198,50 @@ def main(csv_path: str, traj_path: str, gamma: float, rho: float,
     xmin, xmax = df['x'].min(), df['x'].max()
     ymin, ymax = df['y'].min(), df['y'].max()
 
-    # Vortex center & core radius
     xc, yc = estimate_vortex_center(df)
     if a_override is None:
         a = infer_core_radius(df, xc, yc)
     else:
         a = float(a_override)
 
-    # Interpolate velocity to grid
     gx = np.linspace(xmin, xmax, grid_N)
     gy = np.linspace(ymin, ymax, grid_N)
     Xg, Yg, Ug, Vg = idw_grid(df, gx, gy, k=8)
 
-    # Load trajectory
     traj = pd.read_csv(traj_path)
     if not {'x','y'} <= set(traj.columns):
-        print("[ERROR] Trajectory CSV must contain columns: x, y (and optionally t)")
+        print("[ERROR] Trajectory CSV must contain columns: x, y")
         sys.exit(1)
     tx = traj['x'].to_numpy(float)
     ty = traj['y'].to_numpy(float)
 
-    # Build figure
-    fig, axs = plt.subplots(1, 2, figsize=(14, 6), constrained_layout=True)
+    # Panel A
+    figA, axA = plt.subplots(figsize=(7, 6), constrained_layout=True)
+    plot_panel_A(axA, Xg, Yg, Ug, Vg, tx, ty, xc, yc, a, xmin, xmax, ymin, ymax, use_stream)
+    figA.savefig(f'{outbase}_panelA.png', dpi=out_dpi)
+    figA.savefig(f'{outbase}_panelA.svg')
+    plt.close(figA)
 
-    speed = np.hypot(Ug, Vg)
-    if use_stream:
-        axs[0].streamplot(Xg, Yg, Ug, Vg, color=speed, density=1.4, linewidth=1.0)
-        mappable = None
-    else:
-        mags = speed + 1e-12
-        Un = Ug/mags; Vn = Vg/mags
-        q = axs[0].quiver(Xg[::3,::3], Yg[::3,::3], Un[::3,::3], Vn[::3,::3],
-                          speed[::3,::3], angles='xy', scale=25, alpha=0.9)
-        mappable = q
+    # Panel B
+    figB, axB = plt.subplots(figsize=(7, 6), constrained_layout=True)
+    plot_panel_B(axB, Xg, Yg, gamma, a, rho, xc, yc, tx, ty, xmin, xmax, ymin, ymax)
+    figB.savefig(f'{outbase}_panelB.png', dpi=out_dpi)
+    figB.savefig(f'{outbase}_panelB.svg')
+    plt.close(figB)
 
-    axs[0].plot(tx, ty, '-', lw=2, label='MB trajectory')
-    axs[0].plot(tx[0], ty[0], 'o', ms=6, label='start')
-    axs[0].plot(tx[-1], ty[-1], 'o', ms=6, label='end')
-    axs[0].add_patch(plt.Circle((xc, yc), a, fill=False, lw=2))
-    axs[0].set_aspect('equal', 'box')
-    axs[0].set_xlim(xmin, xmax)
-    axs[0].set_ylim(ymin, ymax)
-    axs[0].grid(alpha=0.25)
-    axs[0].set_title('Measured velocity + MB trajectory')
-    axs[0].legend(loc='upper right', frameon=False)
-    if mappable is not None:
-        fig.colorbar(mappable, ax=axs[0], label='Speed (CSV units/s)')
+    # Combined (optional)
+    if save_combined:
+        fig, axs = plt.subplots(1, 2, figsize=(14, 6), constrained_layout=True)
+        plot_panel_A(axs[0], Xg, Yg, Ug, Vg, tx, ty, xc, yc, a, xmin, xmax, ymin, ymax, use_stream)
+        plot_panel_B(axs[1], Xg, Yg, gamma, a, rho, xc, yc, tx, ty, xmin, xmax, ymin, ymax)
+        fig.savefig(f'{outbase}_combined.png', dpi=out_dpi)
+        fig.savefig(f'{outbase}_combined.svg')
+        plt.close(fig)
 
-    # Pressure panel
-    p = rankine_pressure(gamma, a, rho, Xg, Yg, xc, yc)
-    cs = axs[1].contourf(Xg, Yg, p, levels=40)
-    axs[1].plot(tx, ty, 'w-', lw=2)
-    axs[1].plot(tx[0], ty[0], 'wo', ms=6)
-    axs[1].plot(tx[-1], ty[-1], 'wo', ms=6)
-    axs[1].add_patch(plt.Circle((xc, yc), a, color='w', fill=False, lw=2))
-    # Inward arrows indicating -∇p direction (schematic)
-    xr = Xg - xc; yr = Yg - yc; rr = np.sqrt(xr**2 + yr**2) + 1e-12
-    axs[1].quiver(Xg[::8,::8], Yg[::8,::8], -xr[::8,::8]/rr[::8,::8], -yr[::8,::8]/rr[::8,::8],
-                  alpha=0.7, scale=20, width=0.004)
-    axs[1].set_aspect('equal', 'box')
-    axs[1].set_xlim(xmin, xmax)
-    axs[1].set_ylim(ymin, ymax)
-    axs[1].grid(alpha=0.25)
-    axs[1].set_title('Analytic pressure (Rankine) + trajectory')
-    fig.colorbar(cs, ax=axs[1], label='Pressure (arb.)')
-
-    # Save
-    plt.savefig(f'{outbase}.png', dpi=300)
-    plt.savefig(f'{outbase}.svg')
     print(f'Center used: (xc, yc)=({xc:.3f}, {yc:.3f})  |  a={a:.3f}')
-    print(f'Saved {outbase}.png and {outbase}.svg')
-
+    print(f'Saved {outbase}_panelA.(png|svg) and {outbase}_panelB.(png|svg)'
+          + (f' plus {outbase}_combined.(png|svg)' if save_combined else ''))
 
 if __name__ == '__main__':
-    # Call main with the hard-coded parameters
-    main(CSV_PATH, TRAJ_PATH, GAMMA, RHO, A_OVERRIDE, OUTBASE, GRID_N, USE_STREAM)
+    main(CSV_PATH, TRAJ_PATH, GAMMA, RHO, A_OVERRIDE, OUTBASE,
+         GRID_N, USE_STREAM, SAVE_COMBINED, OUT_DPI)
