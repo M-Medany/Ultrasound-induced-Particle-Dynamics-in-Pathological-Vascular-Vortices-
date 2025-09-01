@@ -78,6 +78,7 @@ This equation can be solved to determine the bubble position over time if the in
 ## Implementation and Visualization
 ![Theoritical Trapping](Videos/trajectory_animation_black.gif)
 
+![Two Bubble Theoritical Trapping](Videos/Microbubble_2_trajectory.gif)
 
 ### Python Scripts
 
