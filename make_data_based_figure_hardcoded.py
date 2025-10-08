@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
-# make_data_based_figure_hardcoded.py
-# Two-panel figure from your CSV velocity field and a simulated trajectory.
-#
-# Panel A: measured velocity (quiver/stream) + bubble trajectory + core circle
-# Panel B: analytic Rankine pressure centered at estimated vortex center
+# make_data_based_figure_two_mb.py
+# Panel A: measured velocity (quiver/stream) + two MB trajectories + core circle
+# Panel B: analytic Rankine pressure centered at estimated vortex center + trajectories
 #
 # OUTPUT:
 #   - <outbase>_panelA.png/.svg, <outbase>_panelB.png/.svg
@@ -18,7 +16,8 @@ from scipy.spatial import cKDTree
 
 # ======================== USER INPUT ========================
 CSV_PATH   = r"C:\Users\M4\VSCode_Projects\Ultrasound-Swarm-Microbubbles-Navigating-Vortices-to-Target-and-Fill-Aneurysms\Excel_data_velocity_comsol\Velocity_2d_5cm.csv"
-TRAJ_PATH  = r"C:\Users\M4\VSCode_Projects\Ultrasound-Swarm-Microbubbles-Navigating-Vortices-to-Target-and-Fill-Aneurysms\trajectory.csv"
+# 👉 point this at your two-bubble CSV:
+TRAJ_PATH  = r"C:\Users\M4\VSCode_Projects\Ultrasound-Swarm-Microbubbles-Navigating-Vortices-to-Target-and-Fill-Aneurysms\trajectory_two_mb.csv"
 
 GAMMA      = 0.95       # Circulation Γ (same units as your CSV)
 RHO        = 1000.0     # Fluid density
@@ -30,14 +29,19 @@ GRID_N          = 120           # Interpolation resolution
 USE_STREAM      = False         # True: streamplot; False: quiver
 SAVE_COMBINED   = True          # Also save the original 2-panel combined figure
 
-# Global font / style (Arial + larger axis tick labels)
+# Style
 FONT_BASE       = 18
 TITLE_SIZE      = 18
 LABEL_SIZE      = 24
 TICK_SIZE       = 20
 LEGEND_SIZE     = 18
-# Increase x and y label font size and set font to Arial
-# LABEL_SIZE      = 20  # Increased from 16
+
+# Trajectory colors/width
+TRAJ1_COLOR     = 'r'    # MB1 red
+TRAJ2_COLOR     = 'b'    # MB2 blue
+START_COLOR     = 'g'    # green start markers
+PATH_LW         = 3.5    # thicker paths
+CORE_EDGE_COLOR = 'k'    # core circle black
 # ====================== END USER INPUT ======================
 
 # --------- global matplotlib font + size (force Arial) ----------
@@ -136,7 +140,9 @@ def rankine_pressure(Gamma: float, a: float, rho: float,
                  -(rho*Gamma**2)/(8*np.pi**2)*(1/r**2))
     return p
 
-def plot_panel_A(ax, Xg, Yg, Ug, Vg, tx, ty, xc, yc, a, xmin, xmax, ymin, ymax, use_stream):
+def plot_panel_A(ax, Xg, Yg, Ug, Vg,
+                 tx1, ty1, tx2, ty2,
+                 xc, yc, a, xmin, xmax, ymin, ymax, use_stream):
     speed = np.hypot(Ug, Vg)
     if use_stream:
         ax.streamplot(Xg, Yg, Ug, Vg, color=speed, density=1.4, linewidth=1.0)
@@ -146,37 +152,52 @@ def plot_panel_A(ax, Xg, Yg, Ug, Vg, tx, ty, xc, yc, a, xmin, xmax, ymin, ymax, 
         ax.quiver(Xg[::3,::3], Yg[::3,::3], Un[::3,::3], Vn[::3,::3],
                   speed[::3,::3], angles='xy', scale=25, alpha=0.9)
 
-    ax.plot(tx, ty, '-', lw=2, label='MB trajectory')
-    ax.plot(tx[0], ty[0], 'o', ms=6, label='start')
-    ax.plot(tx[-1], ty[-1], 'o', ms=6, label='end')
-    ax.add_patch(plt.Circle((xc, yc), a, fill=False, lw=2))
+    # MB1
+    ax.plot(tx1, ty1, '-', lw=PATH_LW, color=TRAJ1_COLOR, label='MB1 path')
+    ax.plot(tx1[0], ty1[0], 'o', ms=7, color=START_COLOR, label='start')
+    ax.plot(tx1[-1], ty1[-1], 'o', ms=7, color=TRAJ1_COLOR, label='end MB1')
+
+    # MB2 (if provided)
+    if tx2 is not None and ty2 is not None:
+        ax.plot(tx2, ty2, '-', lw=PATH_LW, color=TRAJ2_COLOR, label='MB2 path')
+        ax.plot(tx2[0], ty2[0], 'o', ms=7, color=START_COLOR)
+        ax.plot(tx2[-1], ty2[-1], 'o', ms=7, color=TRAJ2_COLOR)
+
+    # core circle
+    ax.add_patch(plt.Circle((xc, yc), a, fill=False, lw=2, edgecolor=CORE_EDGE_COLOR))
+
     ax.set_aspect('equal', 'box')
-    ax.set_xlim(xmin, xmax)
-    ax.set_ylim(ymin, ymax)
+    ax.set_xlim(xmin, xmax); ax.set_ylim(ymin, ymax)
     ax.grid(alpha=0.25)
-    # ax.set_title('Measured velocity + MB trajectory', fontfamily="Arial")
     ax.set_xlabel('x', fontfamily="Arial")
     ax.set_ylabel('y', fontfamily="Arial")
-    leg = ax.legend(loc='upper right', frameon=False)
+    leg = ax.legend(loc='upper right', frameon=False, ncol=2)
     for txt in leg.get_texts():
         txt.set_fontfamily("Arial")
         txt.set_fontsize(LEGEND_SIZE)
 
-def plot_panel_B(ax, Xg, Yg, gamma, a, rho, xc, yc, tx, ty, xmin, xmax, ymin, ymax):
+def plot_panel_B(ax, Xg, Yg, gamma, a, rho, xc, yc,
+                 tx1, ty1, tx2, ty2, xmin, xmax, ymin, ymax):
     p = rankine_pressure(gamma, a, rho, Xg, Yg, xc, yc)
-    ax.contourf(Xg, Yg, p, levels=40)
-    ax.plot(tx, ty, 'w-', lw=2)
-    ax.plot(tx[0], ty[0], 'wo', ms=6)
-    ax.plot(tx[-1], ty[-1], 'wo', ms=6)
+    c = ax.contourf(Xg, Yg, p, levels=40)
+    # trajectories on top
+    ax.plot(tx1, ty1, '-', lw=PATH_LW, color=TRAJ1_COLOR)
+    ax.plot(tx1[0], ty1[0], 'o', ms=7, color=START_COLOR)
+    ax.plot(tx1[-1], ty1[-1], 'o', ms=7, color=TRAJ1_COLOR)
+    if tx2 is not None and ty2 is not None:
+        ax.plot(tx2, ty2, '-', lw=PATH_LW, color=TRAJ2_COLOR)
+        ax.plot(tx2[0], ty2[0], 'o', ms=7, color=START_COLOR)
+        ax.plot(tx2[-1], ty2[-1], 'o', ms=7, color=TRAJ2_COLOR)
+
+    # core circle
     ax.add_patch(plt.Circle((xc, yc), a, color='w', fill=False, lw=2))
+    # inward pressure direction field
     xr = Xg - xc; yr = Yg - yc; rr = np.sqrt(xr**2 + yr**2) + 1e-12
     ax.quiver(Xg[::8,::8], Yg[::8,::8], -xr[::8,::8]/rr[::8,::8], -yr[::8,::8]/rr[::8,::8],
-              alpha=0.7, scale=20, width=0.004)
+              alpha=0.7, scale=20, width=0.004, color='k')
     ax.set_aspect('equal', 'box')
-    ax.set_xlim(xmin, xmax)
-    ax.set_ylim(ymin, ymax)
+    ax.set_xlim(xmin, xmax); ax.set_ylim(ymin, ymax)
     ax.grid(alpha=0.25)
-    # ax.set_title('Analytic pressure (Rankine) + trajectory', fontfamily="Arial")
     ax.set_xlabel('x', fontfamily="Arial")
     ax.set_ylabel('y', fontfamily="Arial")
 
@@ -208,23 +229,31 @@ def main(csv_path: str, traj_path: str, gamma: float, rho: float,
     gy = np.linspace(ymin, ymax, grid_N)
     Xg, Yg, Ug, Vg = idw_grid(df, gx, gy, k=8)
 
+    # -------- read trajectory (supports 1 or 2 bubbles) --------
     traj = pd.read_csv(traj_path)
-    if not {'x','y'} <= set(traj.columns):
-        print("[ERROR] Trajectory CSV must contain columns: x, y")
+    cols = set(traj.columns.str.strip())
+    if {'x1','y1','x2','y2'} <= cols:
+        tx1 = traj['x1'].to_numpy(float); ty1 = traj['y1'].to_numpy(float)
+        tx2 = traj['x2'].to_numpy(float); ty2 = traj['y2'].to_numpy(float)
+    elif {'x','y'} <= cols:
+        tx1 = traj['x'].to_numpy(float);  ty1 = traj['y'].to_numpy(float)
+        tx2 = None; ty2 = None
+    else:
+        print("[ERROR] Trajectory CSV must contain (x,y) or (x1,y1,x2,y2).")
         sys.exit(1)
-    tx = traj['x'].to_numpy(float)
-    ty = traj['y'].to_numpy(float)
 
     # Panel A
     figA, axA = plt.subplots(figsize=(7, 6), constrained_layout=True)
-    plot_panel_A(axA, Xg, Yg, Ug, Vg, tx, ty, xc, yc, a, xmin, xmax, ymin, ymax, use_stream)
+    plot_panel_A(axA, Xg, Yg, Ug, Vg, tx1, ty1, tx2, ty2, xc, yc, a,
+                 xmin, xmax, ymin, ymax, use_stream)
     figA.savefig(f'{outbase}_panelA.png', dpi=out_dpi)
     figA.savefig(f'{outbase}_panelA.svg')
     plt.close(figA)
 
     # Panel B
     figB, axB = plt.subplots(figsize=(7, 6), constrained_layout=True)
-    plot_panel_B(axB, Xg, Yg, gamma, a, rho, xc, yc, tx, ty, xmin, xmax, ymin, ymax)
+    plot_panel_B(axB, Xg, Yg, gamma, a, rho, xc, yc, tx1, ty1, tx2, ty2,
+                 xmin, xmax, ymin, ymax)
     figB.savefig(f'{outbase}_panelB.png', dpi=out_dpi)
     figB.savefig(f'{outbase}_panelB.svg')
     plt.close(figB)
@@ -232,8 +261,10 @@ def main(csv_path: str, traj_path: str, gamma: float, rho: float,
     # Combined (optional)
     if save_combined:
         fig, axs = plt.subplots(1, 2, figsize=(14, 6), constrained_layout=True)
-        plot_panel_A(axs[0], Xg, Yg, Ug, Vg, tx, ty, xc, yc, a, xmin, xmax, ymin, ymax, use_stream)
-        plot_panel_B(axs[1], Xg, Yg, gamma, a, rho, xc, yc, tx, ty, xmin, xmax, ymin, ymax)
+        plot_panel_A(axs[0], Xg, Yg, Ug, Vg, tx1, ty1, tx2, ty2, xc, yc, a,
+                     xmin, xmax, ymin, ymax, use_stream)
+        plot_panel_B(axs[1], Xg, Yg, gamma, a, rho, xc, yc, tx1, ty1, tx2, ty2,
+                     xmin, xmax, ymin, ymax)
         fig.savefig(f'{outbase}_combined.png', dpi=out_dpi)
         fig.savefig(f'{outbase}_combined.svg')
         plt.close(fig)
