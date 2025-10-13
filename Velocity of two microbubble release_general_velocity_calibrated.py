@@ -37,6 +37,8 @@ a_override = 15       # set None to auto-detect core radius from peak speed
 
 CENTER_OVERRIDE = None  # e.g. (3835.0, 335.0)
 
+CENTER_GRID_RES = 30     # sampling resolution for center search (higher = slower)
+
 
 
 # Initial states (must be inside CSV domain)    CSV UNITS
@@ -59,7 +61,7 @@ t_span = (0.0, 2_000_000.0)
 
 rtol, atol = 1e-6, 1e-9
 
-chunk_steps_target = 400  # ~steps per chunk
+chunk_steps_target = 100  # ~steps per chunk (larger max steps yield fewer RHS calls)
 
 
 
@@ -73,12 +75,12 @@ mask_radius    = 10.0     # CSV units (white halo around MBs)
 quiver_scale   = 30
 
 # Frame export toggles
-ENABLE_FRAME_EXPORT = True
-ENABLE_STATIC_EXPORT = True
+ENABLE_FRAME_EXPORT = False
+ENABLE_STATIC_EXPORT = False
 MAX_FRAME_COUNT = False    # limit total frames (None for all)
 MULTIPROCESSING_ENABLED = True
 MAX_POOL_WORKERS = 4      # cap worker count to reduce memory duplication on Windows
-TRAJECTORY_SUBSAMPLE = None  # set >1 to keep every Nth solver step before exporting/plotting
+TRAJECTORY_SUBSAMPLE = 10  # keep every 10th solver step when exporting/plotting
 
 # Colors & styles
 TRAJ1_COLOR = 'r'       # MB1: red
@@ -278,9 +280,9 @@ def estimate_vortex_center(df):
 
 
 
-    xs = np.linspace(np.percentile(X, 10), np.percentile(X, 90), 60)
-
-    ys = np.linspace(np.percentile(Y, 10), np.percentile(Y, 90), 60)
+    grid_res = max(10, int(CENTER_GRID_RES))
+    xs = np.linspace(np.percentile(X, 10), np.percentile(X, 90), grid_res)
+    ys = np.linspace(np.percentile(Y, 10), np.percentile(Y, 90), grid_res)
 
 
 
@@ -429,13 +431,9 @@ def solve_ode_chunk(t0, t1, Yinit):
     max_step = max(1e-9, span / CHUNK_STEPS_TARGET)
 
     sol = solve_ivp(
-
         rhs, [t0, t1], Yinit, method="RK45",
-
         rtol=RTOL, atol=ATOL, max_step=max_step,
-
-        dense_output=True, events=out_of_bounds
-
+        events=out_of_bounds
     )
 
     return sol.t, sol.y

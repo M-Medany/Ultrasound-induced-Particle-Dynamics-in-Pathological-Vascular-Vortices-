@@ -20,7 +20,9 @@ if not os.path.exists(output_dir):
 
 # Read velocity data from CSV
 print("Reading velocity data from CSV...")
-file_path = r'C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Excel_data_velocity_comsol\Normalized_60_cm.csv'
+# file_path = r'C:\Users\M4\VSCode_Projects\Ultrasound-Swarm-Microbubbles-Navigating-Vortices-to-Target-and-Fill-Aneurysms\Excel_data_velocity_comsol\Normalized_Velocity_60_cm_Full.csv'
+file_path = r"C:\Users\M4\VSCode_Projects\Ultrasound-Swarm-Microbubbles-Navigating-Vortices-to-Target-and-Fill-Aneurysms\Excel_data_velocity_comsol\Normalized_Velocity_60_cm_Full.csv"
+
 velocity_data = pd.read_csv(file_path, skiprows=7, names=['x', 'y', 'z', 'u', 'v', 'w'])
 
 # Clean data (direct, without dropping rows)
@@ -203,5 +205,5 @@ if __name__ == '__main__':
             print(f"An unexpected error occurred: {e}")
 
     # Example usage
-    file_path = r'C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Excel_data_velocity_comsol\Normalized_60_cm.csv'
+    file_path = r"C:\Users\M4\VSCode_Projects\Ultrasound-Swarm-Microbubbles-Navigating-Vortices-to-Target-and-Fill-Aneurysms\Excel_data_velocity_comsol\Normalized_Velocity_60_cm_Full.csv"
     read_and_plot_data(file_path)

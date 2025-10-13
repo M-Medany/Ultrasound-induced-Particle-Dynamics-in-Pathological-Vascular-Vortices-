@@ -40,6 +40,12 @@ frame_interval = 20
 skip_interval  = 10
 mask_radius    = 10.0     # CSV units (white halo around MBs)
 quiver_scale   = 30
+QUIVER_MAX_VECTORS = 2000   # cap arrow count (set None for all)
+QUIVER_Y_MIN   = None       # e.g. 100.0 to hide the lower region
+QUIVER_RANDOM_SEED = 0      # stable downsampling
+X_AXIS_LABEL = 'x (mm)'
+Y_AXIS_LABEL = 'y (mm)'
+SHOW_GRID = False
 
 # Colors & styles
 TRAJ1_COLOR = 'r'       # MB1: red
@@ -51,7 +57,7 @@ PATH_LW = 3.5           # thicker paths
 CSV_VEL_UNITS = 'm/s'     # what your CSV velocities are in
 DISPLAY_VEL_UNITS = 'cm/s' # what you want to display
 VMAG_SCALE = 100 if (CSV_VEL_UNITS == 'm/s' and DISPLAY_VEL_UNITS == 'cm/s') else 1.0
-CBAR_LABEL = f'Velocity Magnitude ({DISPLAY_VEL_UNITS})'
+CBAR_LABEL = f'Velocity magnitude [{DISPLAY_VEL_UNITS}]'
 
 # ---- Trajectory-only export (no background) ----
 DRAW_CORE_CIRCLE = True      # keep black circle
@@ -159,6 +165,20 @@ def grad_p_rankine(x, y, xc, yc, Gamma, rho, a, eps=1e-15):
     r = np.hypot(xr, yr) + eps
     dpr = dp_dr_rankine(r, Gamma, rho, a)
     return dpr * np.array([xr/r, yr/r])
+
+def select_quiver_indices(X, Y, step, y_min=None, max_vectors=None, seed=0):
+    """
+    Downsample/compress velocity vectors for clearer quiver plots.
+    """
+    idx = np.arange(X.size)
+    if y_min is not None:
+        idx = idx[Y[idx] >= y_min]
+    if step > 1:
+        idx = idx[::step]
+    if max_vectors is not None and idx.size > max_vectors:
+        rng = np.random.default_rng(seed)
+        idx = np.sort(rng.choice(idx, size=max_vectors, replace=False))
+    return idx
 
 # ------------------------ Dynamics -----------------------------
 def rhs(t, Y):
@@ -332,8 +352,12 @@ def main():
     def save_frames():
         X = vf['x'].to_numpy(float); Y = vf['y'].to_numpy(float)
         U = vf['u'].to_numpy(float); V = vf['v'].to_numpy(float)
-        Xs = X[::skip_interval]; Ys = Y[::skip_interval]
-        Us = U[::skip_interval]; Vs = V[::skip_interval]
+        keep = select_quiver_indices(
+            X, Y, skip_interval, y_min=QUIVER_Y_MIN,
+            max_vectors=QUIVER_MAX_VECTORS, seed=QUIVER_RANDOM_SEED
+        )
+        Xs = X[keep]; Ys = Y[keep]
+        Us = U[keep]; Vs = V[keep]
 
         # magnitude in CSV units, then convert for display (cm/s)
         mags_raw = np.hypot(Us, Vs)
@@ -349,6 +373,7 @@ def main():
         tx2, ty2 = final_y[4], final_y[5]
         n = tx1.size
 
+        legend_handles_labels = None
         for i in range(0, n, frame_interval):
             d1 = np.hypot(Xs - tx1[i], Ys - ty1[i])
             d2 = np.hypot(Xs - tx2[i], Ys - ty2[i])
@@ -363,12 +388,16 @@ def main():
             cbar.set_label(CBAR_LABEL, fontsize=LABEL_FONTSIZE)
 
             # thicker, fixed-color paths
-            ax.plot(tx1[:i+1], ty1[:i+1], lw=PATH_LW, color=TRAJ1_COLOR, label='MB1 path')
-            ax.plot(tx2[:i+1], ty2[:i+1], lw=PATH_LW, color=TRAJ2_COLOR, label='MB2 path')
+            path_label1 = 'MB1 path' if i == 0 else None
+            path_label2 = 'MB2 path' if i == 0 else None
+            ax.plot(tx1[:i+1], ty1[:i+1], lw=PATH_LW, color=TRAJ1_COLOR, label=path_label1)
+            ax.plot(tx2[:i+1], ty2[:i+1], lw=PATH_LW, color=TRAJ2_COLOR, label=path_label2)
 
             # starts
-            ax.plot(tx1[0], ty1[0], marker='o', ms=7, linestyle='None', color=TRAJ1_COLOR, label='start MB1')
-            ax.plot(tx2[0], ty2[0], marker='o', ms=7, linestyle='None', color=TRAJ2_COLOR, label='start MB2')
+            start_label1 = 'start MB1' if i == 0 else None
+            start_label2 = 'start MB2' if i == 0 else None
+            ax.plot(tx1[0], ty1[0], marker='o', ms=7, linestyle='None', color=TRAJ1_COLOR, label=start_label1)
+            ax.plot(tx2[0], ty2[0], marker='o', ms=7, linestyle='None', color=TRAJ2_COLOR, label=start_label2)
 
             # current positions (hollow)
             ax.plot(tx1[i], ty1[i], marker='o', linestyle='None',
@@ -381,13 +410,19 @@ def main():
             ax.add_patch(core)
 
             ax.set_title('Velocity field + Two MB trajectories', fontsize=TITLE_FONTSIZE)
-            ax.set_xlabel('x (CSV units)', fontsize=LABEL_FONTSIZE)
-            ax.set_ylabel('y (CSV units)', fontsize=LABEL_FONTSIZE)
+            ax.set_xlabel(X_AXIS_LABEL, fontsize=LABEL_FONTSIZE)
+            ax.set_ylabel(Y_AXIS_LABEL, fontsize=LABEL_FONTSIZE)
             ax.tick_params(axis='both', labelsize=TICK_FONTSIZE)
-            ax.set_aspect('equal', 'box'); ax.grid(alpha=0.3)
+            ax.set_aspect('equal', 'box')
+            if SHOW_GRID:
+                ax.grid(alpha=0.3)
             ax.set_xlim(xmin, xmax); ax.set_ylim(ymin, ymax)
-            if i == 0:
-                ax.legend(loc='upper right', ncol=2, prop={'size': LEGEND_FONTSIZE})
+            handles, labels = ax.get_legend_handles_labels()
+            if legend_handles_labels is None and handles:
+                legend_handles_labels = (handles, labels)
+            if legend_handles_labels is not None:
+                ax.legend(*legend_handles_labels, loc='upper right', ncol=2,
+                          prop={'size': LEGEND_FONTSIZE})
 
             fig.tight_layout()
 
@@ -413,8 +448,12 @@ def main():
     def save_static():
         X = vf['x'].to_numpy(float); Y = vf['y'].to_numpy(float)
         U = vf['u'].to_numpy(float); V = vf['v'].to_numpy(float)
-        Xs = X[::skip_interval]; Ys = Y[::skip_interval]
-        Us = U[::skip_interval]; Vs = V[::skip_interval]
+        keep = select_quiver_indices(
+            X, Y, skip_interval, y_min=QUIVER_Y_MIN,
+            max_vectors=QUIVER_MAX_VECTORS, seed=QUIVER_RANDOM_SEED
+        )
+        Xs = X[keep]; Ys = Y[keep]
+        Us = U[keep]; Vs = V[keep]
 
         mags_raw = np.hypot(Us, Vs)
         mags_raw = np.where(mags_raw == 0, 1e-12, mags_raw)
@@ -446,10 +485,12 @@ def main():
         ax.add_patch(core)
 
         ax.set_title('Velocity field + Two MB trajectories (static)', fontsize=TITLE_FONTSIZE)
-        ax.set_xlabel('x (CSV units)', fontsize=LABEL_FONTSIZE)
-        ax.set_ylabel('y (CSV units)', fontsize=LABEL_FONTSIZE)
+        ax.set_xlabel(X_AXIS_LABEL, fontsize=LABEL_FONTSIZE)
+        ax.set_ylabel(Y_AXIS_LABEL, fontsize=LABEL_FONTSIZE)
         ax.tick_params(axis='both', labelsize=TICK_FONTSIZE)
-        ax.set_aspect('equal', 'box'); ax.grid(alpha=0.3)
+        ax.set_aspect('equal', 'box')
+        if SHOW_GRID:
+            ax.grid(alpha=0.3)
         ax.set_xlim(xmin, xmax); ax.set_ylim(ymin, ymax)
         ax.legend(loc='upper right', ncol=2, prop={'size': LEGEND_FONTSIZE})
 
@@ -459,12 +500,12 @@ def main():
                         dpi=DPI_STATIC, bbox_inches="tight",
                         pil_kwargs={"compress_level": 1})
         except Exception as e:
-            print(f"PNG save failed for static ({e}). Saving JPG fallback.")
-            plt.savefig("velocity_Trajectory_two_mb.jpg", format="jpg",
+            print(f"PNG save failed for static ({e}). Saving SVG fallback.")
+            plt.savefig("velocity_Trajectory_two_mb.svg", format="svg",
                         dpi=DPI_STATIC, bbox_inches="tight")
         finally:
             plt.close(fig)
-        print("Saved: velocity_Trajectory_two_mb.(png/jpg)")
+        print("Saved: velocity_Trajectory_two_mb.(png/svg)")
 
     # ---- Run the plotting ----
     save_frames()
