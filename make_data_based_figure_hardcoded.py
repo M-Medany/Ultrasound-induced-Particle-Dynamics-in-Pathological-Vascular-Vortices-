@@ -24,7 +24,7 @@ RHO        = 1000.0     # Fluid density
 A_OVERRIDE = 15         # Core radius a. Set to None to auto-estimate from data
 
 OUTBASE         = "fig_data"    # Base name; files get _panelA/_panelB/_combined suffixes
-OUT_DPI         = 300           # Output DPI for PNGs
+OUT_DPI         = 600           # Output DPI for PNGs
 GRID_N          = 120           # Interpolation resolution
 USE_STREAM      = False         # True: streamplot; False: quiver
 SAVE_COMBINED   = True          # Also save the original 2-panel combined figure
@@ -42,6 +42,7 @@ TRAJ2_COLOR     = 'b'    # MB2 blue
 START_COLOR     = 'g'    # green start markers
 PATH_LW         = 3.5    # thicker paths
 CORE_EDGE_COLOR = 'k'    # core circle black
+PANEL_B_CMAP    = plt.cm.gray_r  # black→white gradient for pressure panel
 # ====================== END USER INPUT ======================
 
 # --------- global matplotlib font + size (force Arial) ----------
@@ -179,7 +180,7 @@ def plot_panel_A(ax, Xg, Yg, Ug, Vg,
 def plot_panel_B(ax, Xg, Yg, gamma, a, rho, xc, yc,
                  tx1, ty1, tx2, ty2, xmin, xmax, ymin, ymax):
     p = rankine_pressure(gamma, a, rho, Xg, Yg, xc, yc)
-    c = ax.contourf(Xg, Yg, p, levels=40)
+    c = ax.contourf(Xg, Yg, p, levels=40, cmap=PANEL_B_CMAP)
     # trajectories on top
     ax.plot(tx1, ty1, '-', lw=PATH_LW, color=TRAJ1_COLOR)
     ax.plot(tx1[0], ty1[0], 'o', ms=7, color=START_COLOR)
@@ -191,10 +192,17 @@ def plot_panel_B(ax, Xg, Yg, gamma, a, rho, xc, yc,
 
     # core circle
     ax.add_patch(plt.Circle((xc, yc), a, color='w', fill=False, lw=2))
-    # inward pressure direction field
+    # inward pressure direction field (sampled symmetrically)
     xr = Xg - xc; yr = Yg - yc; rr = np.sqrt(xr**2 + yr**2) + 1e-12
-    ax.quiver(Xg[::8,::8], Yg[::8,::8], -xr[::8,::8]/rr[::8,::8], -yr[::8,::8]/rr[::8,::8],
-              alpha=0.7, scale=20, width=0.004, color='k')
+    stride = 8
+    ii = np.arange(stride // 2, Xg.shape[0], stride)
+    jj = np.arange(stride // 2, Xg.shape[1], stride)
+    Xi = Xg[np.ix_(ii, jj)]
+    Yi = Yg[np.ix_(ii, jj)]
+    Ui = (-xr / rr)[np.ix_(ii, jj)]
+    Vi = (-yr / rr)[np.ix_(ii, jj)]
+    ax.quiver(Xi, Yi, Ui, Vi, alpha=0.85, scale=20, width=0.004,
+              color='white', edgecolor='black', linewidths=0.3)
     ax.set_aspect('equal', 'box')
     ax.set_xlim(xmin, xmax); ax.set_ylim(ymin, ymax)
     ax.grid(alpha=0.25)
