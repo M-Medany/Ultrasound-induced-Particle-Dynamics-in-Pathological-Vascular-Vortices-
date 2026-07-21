@@ -1,103 +1,105 @@
-# Diseased Vasculatures and Microbubble Dynamics
+# Ultrasound-induced Particle Dynamics in Pathological Vascular Vortices
+
+Code and data accompanying the manuscript:
+
+> **Ultrasound-induced Particle Dynamics in Pathological Vascular Vortices**
+> Mahmoud Medany<sup>1,2</sup>, Nitesh Nama<sup>3</sup>, Daniel Ahmed<sup>1,2\*</sup>
+>
+> <sup>1</sup> Acoustic Robotics Systems Lab, ARTORG Center for Biomedical Engineering Research, Faculty of Medicine, University of Bern, Switzerland
+> <sup>2</sup> Acoustic Robotics Systems Lab, Department of Mechanical and Process Engineering, ETH Zurich, Switzerland
+> <sup>3</sup> Department of Mechanical & Materials Engineering, University of Nebraska-Lincoln, USA
+>
+> \*Corresponding author: daniel.ahmed@unibe.ch
+
+---
 
 ## Overview
 
-Understanding the dynamics of micro and nanoparticles in disturbed flow profiles of diseased vasculatures is critical for advancing targeted treatments and developing effective therapeutic strategies. Our research explores the use of a novel ultrasound method to fill aneurysm cavities with clinically approved microbubbles (MBs). Using microfluidics-based aneurysm models that mimic physiological flow conditions, we have developed a groundbreaking technique for trapping and aggregating MBs in disturbed flow environments.
+In physiological aneurysm-like microfluidic models, clinically approved microbubbles (MBs) under ultrasound migrate into vortex cores, self-cluster through acoustic interactions, and — on reaching a critical aggregate size (~15 µm) — are expelled and anchor at the cavity wall. Repetition of this **capture → growth → ejection → anchoring** cycle fills aneurysm-like cavities on a seconds timescale.
 
-## Key Findings
+![Microbubble trapping at the vortex eye](Videos/Bubblu_vortex_20fps.gif)
 
-### Microbubble Trapping and Aggregation
+This repository contains the theoretical-model implementation, the experimental tracking code, and the post-processing that produces the published figures.
 
-When MBs are injected into disturbed flow and ultrasound is activated, they become trapped at the vortex's eye. They attract other MBs from the flow due to ultrasound-induced attractive forces.
+---
 
-![Microbubble Trapping](Videos/Bubblu_vortex_20fps.gif)
+## Model
 
-### Cluster Formation and Ejection
+The complete formulation — force balance, Rankine confinement, and the ejection criterion — is given in **Supporting Information, Notes 1–2 (Eqs. S1–S5)** of the manuscript. This section covers only what the code implements.
 
-Once the MB cluster reaches a critical size, it is ejected from the vortex and migrates to the wall opposite the piezo transducer, where it continues to attract and cluster MBs, filling the aneurysm cavity.
+The solver models the **capture stage**: two independent MBs released into the measured 2-D carrier flow. Secondary Bjerknes forces, wall images, and explicit primary radiation forcing are **intentionally omitted** here (see Supporting Note 2) — those are treated analytically in the clustering/ejection analysis. For each bubble $i = 1,2$:
 
-### Therapeutic Potential
+$$\dot{\mathbf{x}}_i = \mathbf{v}_i, \qquad \dot{\mathbf{v}}_i = -\frac{3}{\rho}\nabla p_{\text{rank}}(\mathbf{x}_i; \mathbf{x}_c, a, \Gamma) + 0.75\,C_D\left(\mathbf{u}_f(\mathbf{x}_i) - \mathbf{v}_i\right)\lVert \mathbf{u}_f(\mathbf{x}_i) - \mathbf{v}_i \rVert$$
 
-This technique has the potential to fill aneurysm cavities within minutes and may be crucial in treating vascular diseases associated with plaque deposits.
+where $\mathbf{u}_f$ is the measured carrier field, $p_{\text{rank}}$ the Rankine pressure surrogate (Eq. S3), $C_D$ an effective quadratic drag constant, and $\rho$ the fluid density. This reproduces inward spiralling and convergence to the vortex eye across entry angles (Fig. 2D–E).
 
-## One-Sentence Summary
+**Implementation:** carrier field interpolated by inverse-distance k-nearest neighbours (k = 8) over a `scipy.spatial.cKDTree`; vortex centre found by minimising the radial velocity component; integration by `solve_ivp` (RK45, `rtol=1e-6`, `atol=1e-9`), terminating if a bubble leaves the measured domain. The time horizon is split into CPU-count subintervals integrated sequentially, each seeded from the previous terminal state (Windows spawn-safety; bounds step size). Output is `trajectory_two_mb.csv`.
 
-Novel acoustic-based self-assembly technique using microbubbles explores disturbed flow effects under ultrasound, promising targeted drug delivery in diseased vasculatures.
+![Simulated two-microbubble capture](Videos/Microbubble_2_trajectory.gif)
 
-## Experimental and Theoretical Framework
+---
 
-### Governing Equations
+## Running
 
-The behavior of MBs under disturbed flow and ultrasound is governed by the following equations:
+```bash
+git clone https://github.com/M-Medany/Ultrasound-induced-Particle-Dynamics-in-Pathological-Vascular-Vortices-.git
+cd Ultrasound-induced-Particle-Dynamics-in-Pathological-Vascular-Vortices-
 
-#### Microbubble Position and Velocity
+python -m venv .venv
+.venv\Scripts\activate          # Windows
+source .venv/bin/activate       # macOS / Linux
 
-$$
-\frac{dx}{dt} = u_{MB}
-$$
+pip install -r requirements.txt
+```
 
-$$
-\frac{du_{MB}}{dt} = \frac{3}{\rho} \nabla p + \frac{3}{4} C_D (u - u_{MB}) |u - u_{MB}|
-$$
+Run the capture solver:
 
-where \( C_D \) is the drag coefficient, \( p \) is the pressure field, \( x \) is the microbubble position, and \( u_{MB} \) is its velocity.
+```bash
+python "Velocity of two microbubble release_general_velocity.py"
+```
 
-#### Vortex Velocity Field
+Parameters are in the `USER CONFIG` block at the top of the script:
 
-$$
-u = 
-\begin{cases} 
--u_{\theta} \sin \theta, u_{\theta} \cos \theta \\
-u_{\theta} = \frac{\Gamma}{2 \pi} \frac{r}{a^2}, & \text{when } r < a \\
-u_{\theta} = \frac{\Gamma}{2 \pi} \frac{1}{r}, & \text{when } r > a 
-\end{cases}
-$$
+| Parameter | Default | Meaning |
+|---|---|---|
+| `CSV_PATH` | `Excel_data_velocity_comsol/Velocity_2d_5cm.csv` | COMSOL carrier field |
+| `rho` | `1000.0` | Fluid density (kg m⁻³) |
+| `CD` | `5` | Effective quadratic drag constant |
+| `Gamma` | `0.95` | Circulation (CSV units) |
+| `a_override` | `15` | Core radius; `None` to auto-detect from peak speed |
+| `x0_1, y0_1` / `x0_2, y0_2` | — | MB release positions (must lie inside the CSV domain) |
+| `rtol, atol` | `1e-6, 1e-9` | RK45 tolerances |
 
-with \( \sin \theta = \frac{y}{r} \), \( \cos \theta = \frac{x}{r} \), and \( r = \sqrt{x^2 + y^2} \), and \( a \) is the radius of the vortex core.
+Figures are regenerated by running [`Plotting_filling_Aneurysm.ipynb`](Plotting_filling_Aneurysm.ipynb) top to bottom.
 
-#### Pressure Field
+Requires Python 3.11. Tested on Windows with the pinned versions in [`requirements.txt`](requirements.txt).
 
-$$
-p = 
-\begin{cases} 
-p_{\infty} - \frac{\Gamma^2}{4 \pi^2} \frac{\rho}{a^2} + \frac{\rho \Gamma^2}{8 \pi^2} \frac{r^2}{a^2}, & \text{when } r < a \\
-p_{\infty} - \frac{\Gamma^2}{8 \pi^2} \frac{\rho}{r^2}, & \text{when } r > a 
-\end{cases}
-$$
+---
 
-### Combined Equation
+## Where each figure comes from
 
-Combining the first two equations results in a second-order partial differential equation:
+| Manuscript figure | Source |
+|---|---|
+| Fig. 2B — velocity profile, polar plot | [`Plotting_filling_Aneurysm.ipynb`](Plotting_filling_Aneurysm.ipynb) cells 22–23 ← `PIV_Velocity_Vortex_center.csv` |
+| Fig. 2D–E — simulated MB capture | [`Velocity of two microbubble release_general_velocity.py`](Velocity%20of%20two%20microbubble%20release_general_velocity.py) |
+| Fig. 2E inset — Rankine pressure well | [`make_rankine_schematic.py`](make_rankine_schematic.py) |
+| Fig. 3F — cluster area at ejection | notebook cells 12–16, 21 ← `Bubble_shooting[_updated].csv` |
+| Fig. 3G — US on/off control | notebook cells 10–11 |
+| Fig. 4D — pulsatile cavity filling | notebook cells 6–7 ← `Filling_Mean_Pulsatile.csv` |
+| Fig. S5 — ejection speed traces (n = 5) | notebook cells 17–20 |
+| Fig. S6B — continuous cavity filling | notebook cells 3–5 ← `Filling_Mean_STD.csv` |
 
-$$
-\frac{d^2 x}{dt^2} + a \frac{dx}{dt} + bx = cu
-$$
+> **Which solver is canonical.** Several exploratory variants of the trajectory solver are kept in the repository root (different flow speeds, drag constants, normalisations, and an experimental acoustic-bias branch). They document the parameter exploration but are **not** the manuscript implementation. Use `Velocity of two microbubble release_general_velocity.py`.
 
-This equation can be solved to determine the bubble position over time if the initial coordinates are known.
+---
 
-## Implementation and Visualization
-![Theoritical Trapping](Videos/trajectory_animation_black.gif)
+## Repository contents
 
-![Two Bubble Theoritical Trapping](Videos/Microbubble_2_trajectory.gif)
-
-### Python Scripts
-
-Our GitHub repository includes Python scripts that:
-- Track experimental videos and plot the data.
-- Solve the theoretical governing equations.
-- Plot the trajectory of microbubbles using velocity data extracted from COMSOL simulations.
-
-### Visualization
-
-The plots illustrate the trajectories of single and multiple microbubbles in disturbed flow environments, providing insights into their behavior under ultrasound.
-![Swarm Trapping](Videos/swarm_traj-ezgif.com-optimize.gif)
-
-## Conclusion
-
-Our research presents a novel method for using ultrasound to manipulate microbubbles in disturbed flow environments, offering promising applications for targeted drug delivery in diseased vasculatures. This technique holds potential for significant advancements in vascular disease treatments, particularly for conditions involving aneurysms and plaque deposits.
-
-## Repository Contents
-
-- **Scripts:** Python scripts for solving theoretical equations and plotting microbubble trajectories.
-- **Data:** Experimental videos and velocity data from COMSOL simulations.
-- **Documentation:** Detailed documentation on how to run the scripts and interpret the results.
+| Path | Contents |
+|---|---|
+| [`Excel_data/`](Excel_data/) | Experimental measurements: filling fractions, cluster areas, PIV vortex-centre velocities |
+| [`Excel_data_velocity_comsol/`](Excel_data_velocity_comsol/) | COMSOL velocity fields, columns `x, y, u, v` |
+| [`Figures/`](Figures/) | Generated figure outputs (PNG + SVG) |
+| [`Videos/`](Videos/), [`Video_tracking/`](Video_tracking/) | Experimental footage and animations |
+| [`Manual_traking.py`](Manual_traking.py) | `EuclideanDistTracker` — nearest-neighbour ID assignment across frames |
+| [`Bubble_tracking.py`](Bubble_tracking.py) | MOG2 background subtraction → contour detection → per-ID trajectory overlay |
