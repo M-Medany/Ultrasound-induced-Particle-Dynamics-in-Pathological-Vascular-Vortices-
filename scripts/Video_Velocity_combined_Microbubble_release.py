@@ -6,6 +6,10 @@ import matplotlib.pyplot as plt
 import os
 from multiprocessing import Pool, cpu_count
 
+from pathlib import Path as _Path
+REPO_ROOT = _Path(__file__).resolve().parents[1]
+
+
 # Constants
 Gamma = 10
 rho = 1000
@@ -20,7 +24,8 @@ if not os.path.exists(output_dir):
 
 # Read velocity data from CSV
 print("Reading velocity data from CSV...")
-velocity_data = pd.read_csv(r'C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Excel_data_velocity_comsol\Normalized_Velocity_2d_5cm.csv')
+# velocity_data = pd.read_csv(REPO_ROOT / "data" / "comsol" / "Normalized_Velocity_2d_5cm.csv")
+velocity_data = pd.read_csv(REPO_ROOT / "data" / "comsol" / "Normalized_60_cm.csv")
 
 # Clean column names if necessary
 velocity_data.columns = velocity_data.columns.str.strip()
@@ -61,32 +66,22 @@ def pressure_gradient(x, y, r):
 
 # Dynamics function equivalent to MATLAB's microbubbleDynamics
 def microbubble_dynamics(t, Y, tree, u_values, v_values):
-    Y = Y.reshape(-1, 4)  # Reshape Y to handle multiple particles
-    dydt = []
-    for i in range(Y.shape[0]):
-        x, y, u_MBx, u_MBy = Y[i]
-        r = np.sqrt(x ** 2 + y ** 2)
-        u = velocity_field(x, y, tree, u_values, v_values)
-        grad_p = pressure_gradient(x, y, r)
-        
-        dxdt = u_MBx
-        dydt_particle = u_MBy
-        du_MBx_dt = (3 / rho) * grad_p[0] + 3 / 4 * CD * (u[0] - u_MBx) * abs(u[0] - u_MBx)
-        du_MBy_dt = (3 / rho) * grad_p[1] + 3 / 4 * CD * (u[1] - u_MBy) * abs(u[1] - u_MBy)
-        
-        dydt.extend([dxdt, dydt_particle, du_MBx_dt, du_MBy_dt])
-    return np.array(dydt)
+    x, y, u_MBx, u_MBy = Y
+    r = np.sqrt(x ** 2 + y ** 2)
+    u = velocity_field(x, y, tree, u_values, v_values)
+    grad_p = pressure_gradient(x, y, r)
+    
+    dxdt = u_MBx
+    dydt = u_MBy
+    du_MBx_dt = (3 / rho) * grad_p[0] + 3 / 4 * CD * (u[0] - u_MBx) * abs(u[0] - u_MBx)
+    du_MBy_dt = (3 / rho) * grad_p[1] + 3 / 4 * CD * (u[1] - u_MBy) * abs(u[1] - u_MBy)
+    
+    return [dxdt, dydt, du_MBx_dt, du_MBy_dt]
 
-# Initial conditions for multiple particles
-initial_conditions_list = [
-    [130, 50, 0, 0],
-    [130, 70, 0, 0],
-    [140, 70, 0, 0],
-    [135, 80, 0, 0],
-    [150, 90, 0, 0],
-    [130, 60, 0, 0]
-]
-initial_conditions = np.concatenate(initial_conditions_list)
+# Initial conditions
+x0 = [130, 50]
+u_MB0 = [0, 0]
+initial_conditions = x0 + u_MB0
 
 # Time span for the simulation
 t_span = [0, 4000000]
@@ -113,7 +108,7 @@ if __name__ == '__main__':
                 results.append(pool.apply_async(solve_ode_chunk, args=(time_intervals[i], initial_conditions, tree, u_values, v_values)))
             else:
                 prev_t, prev_y = results[i - 1].get()
-                initial_conditions_list[i] = prev_y[:, -1].flatten()  # Update initial conditions for the next chunk
+                initial_conditions_list[i] = [prev_y[0, -1], prev_y[1, -1], prev_y[2, -1], prev_y[3, -1]]
                 results.append(pool.apply_async(solve_ode_chunk, args=(time_intervals[i], initial_conditions_list[i], tree, u_values, v_values)))
 
         final_t = []
@@ -183,24 +178,15 @@ if __name__ == '__main__':
                 ax.axis('equal')
                 ax.grid(True, alpha=0.3)
 
-                # Plot the trajectory for each particle
-                num_particles = 6
-                for j in range(num_particles):
-                    idx = j * 4
-                    ax.plot(final_y[idx, :i+1], final_y[idx+1, :i+1], 'k-', linewidth=1.5)  # Black trajectory line
-                    if i == 0:
-                        ax.plot(final_y[idx, 0], final_y[idx+1, 0], 'go', markerfacecolor='g', markersize=8)  # Start point in green
+                # Plot the trajectory
+                ax.plot(final_y[0, :i+1], final_y[1, :i+1], 'k-', linewidth=2)  # Black trajectory line
+                ax.plot(final_y[0, 0], final_y[1, 0], 'go', markerfacecolor='g', markersize=8)  # Start point in green
 
-                    # Draw a fully opaque white circle around the particle
-                    particle_x, particle_y = final_y[idx, i], final_y[idx+1, i]
-                    circle = plt.Circle((particle_x, particle_y), 1.1 * mask_radius, color='white', alpha=1.0)
-                    ax.add_patch(circle)
-
-                # Draw red dots for each particle to ensure they are on top
-                for j in range(num_particles):
-                    idx = j * 4
-                    particle_x, particle_y = final_y[idx, i], final_y[idx+1, i]
-                    ax.plot(particle_x, particle_y, 'ro', markersize=6)  # Red dot
+                # Draw a red dot and a shaded white circle around the particle
+                particle_x, particle_y = final_y[0, i], final_y[1, i]
+                circle = plt.Circle((particle_x, particle_y), 1.5 * mask_radius, color='white', alpha=0.95)
+                ax.add_patch(circle)
+                ax.plot(particle_x, particle_y, 'ro', markersize=6)  # Red dot
 
                 # Save the figure
                 plt.savefig(f"{output_dir}/frame_{i:04d}.png", dpi=300)
@@ -216,7 +202,9 @@ if __name__ == '__main__':
             print(f"An unexpected error occurred: {e}")
 
     # Example usage
-    file_path = r'C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Excel_data_velocity_comsol\Normalized_Velocity_2d_5cm.csv'
+    # file_path = REPO_ROOT / "data" / "comsol" / "Normalized_Velocity_2d_5cm.csv"
+    file_path = REPO_ROOT / "data" / "comsol" / "Normalized_60_cm.csv"
+
     read_and_plot_data(file_path, frame_interval=20)  # Save every 20th frame
 
     # To create a video from the images using ffmpeg:

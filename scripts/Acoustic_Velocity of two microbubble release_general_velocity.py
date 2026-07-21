@@ -9,11 +9,15 @@ from scipy.spatial import cKDTree
 from multiprocessing import get_context, cpu_count
 from PIL import ImageFile
 
+from pathlib import Path as _Path
+REPO_ROOT = _Path(__file__).resolve().parents[1]
+
+
 # ---------------- Pillow/PNG robustness (Windows) ----------------
 ImageFile.MAXBLOCK = 1 << 24  # 16 MB
 
 # ===================== USER CONFIG =====================
-CSV_PATH = r"C:\Users\M4\VSCode_Projects\Ultrasound-Swarm-Microbubbles-Navigating-Vortices-to-Target-and-Fill-Aneurysms\Excel_data_velocity_comsol\Velocity_2d_5cm.csv"
+CSV_PATH = REPO_ROOT / "data" / "comsol" / "Velocity_2d_5cm.csv"
 
 rho = 1000.0
 Gamma = 0.95          # circulation (CSV units)

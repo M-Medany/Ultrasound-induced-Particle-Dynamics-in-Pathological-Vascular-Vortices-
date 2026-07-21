@@ -6,6 +6,10 @@ import matplotlib.pyplot as plt
 import os
 from multiprocessing import Pool, cpu_count
 
+from pathlib import Path as _Path
+REPO_ROOT = _Path(__file__).resolve().parents[1]
+
+
 # ===================== Constants (SI) =====================
 # Choose physically consistent values with your CSV (meters, m/s)
 Gamma = 4      # [m^2/s] circulation (set to your case; your old "3" assumed different units)
@@ -20,7 +24,7 @@ os.makedirs(output_dir, exist_ok=True)
 
 # ================== Read velocity CSV ====================
 print("Reading velocity data from CSV...")
-file_path = r'C:\Users\M4\VSCode_Projects\Ultrasound-Swarm-Microbubbles-Navigating-Vortices-to-Target-and-Fill-Aneurysms\Excel_data_velocity_comsol\Velocity_2d_5cm.csv'
+file_path = REPO_ROOT / "data" / "comsol" / "Velocity_2d_5cm.csv"
 velocity_data = pd.read_csv(file_path)
 velocity_data.columns = velocity_data.columns.str.strip()
 print(f"Columns: {velocity_data.columns.tolist()}")

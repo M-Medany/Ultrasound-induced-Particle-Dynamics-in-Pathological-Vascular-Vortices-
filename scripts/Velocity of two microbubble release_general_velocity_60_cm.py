@@ -14,11 +14,15 @@ from scipy.integrate import solve_ivp
 from scipy.spatial import cKDTree
 from multiprocessing import get_context, cpu_count
 from PIL import ImageFile
+
+from pathlib import Path as _Path
+REPO_ROOT = _Path(__file__).resolve().parents[1]
+
 ImageFile.MAXBLOCK = 1 << 24
 
 # ===================== USER CONFIG =====================
 
-CSV_PATH = r"C:\Users\M4\VSCode_Projects\Ultrasound-Swarm-Microbubbles-Navigating-Vortices-to-Target-and-Fill-Aneurysms\Excel_data_velocity_comsol\Normalized_Velocity_60_cm_Full.csv"
+CSV_PATH = REPO_ROOT / "data" / "comsol" / "Normalized_Velocity_60_cm_Full.csv"
 
 # CSV units & normalization
 CSV_POS_UNITS = 'm'          # {'m','mm','um'}

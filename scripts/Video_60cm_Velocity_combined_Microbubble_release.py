@@ -6,10 +6,14 @@ import matplotlib.pyplot as plt
 import os
 from multiprocessing import Pool, cpu_count
 
+from pathlib import Path as _Path
+REPO_ROOT = _Path(__file__).resolve().parents[1]
+
+
 # Constants
-Gamma = 10
+Gamma = 3
 rho = 1000
-a = 50
+a = 0.002
 CD = 1.5
 p_inf = 1e5
 
@@ -20,25 +24,16 @@ if not os.path.exists(output_dir):
 
 # Read velocity data from CSV
 print("Reading velocity data from CSV...")
-file_path = r'C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Excel_data_velocity_comsol\Velocity_60_cm_Full_scaled.csv'
-velocity_data = pd.read_csv(file_path)
-
+velocity_data = pd.read_csv(REPO_ROOT / "data" / "comsol" / "Velocity_60_cm_Full_scaled.csv")
+# C:\Users\M4\VSCode_Projects\Ultrasound-Swarm-Microbubbles-Navigating-Vortices-to-Target-and-Fill-Aneurysms\Excel_data_velocity_comsol
 # Clean column names if necessary
 velocity_data.columns = velocity_data.columns.str.strip()
 print(f"Columns in the data: {velocity_data.columns.tolist()}")
 
-# Convert velocity to cm/s
-velocity_data['u2'] *= 100
-velocity_data['v2'] *= 100
-
-# Print first few rows to verify the data
-print("First few rows of velocity data:")
-print(velocity_data.head())
-
 # Extract data for interpolation
 points = velocity_data[['x', 'y']].values
-u_values = velocity_data['u2'].values
-v_values = velocity_data['v2'].values
+u_values = velocity_data['u'].values
+v_values = velocity_data['v'].values
 print(f"Loaded {len(points)} points for interpolation.")
 
 # Build a KDTree for fast interpolation
@@ -83,15 +78,12 @@ def microbubble_dynamics(t, Y, tree, u_values, v_values):
     return [dxdt, dydt, du_MBx_dt, du_MBy_dt]
 
 # Initial conditions
-x0 = [130, 50]
+x0 = [70, 150]
 u_MB0 = [0, 0]
 initial_conditions = x0 + u_MB0
 
-# Print initial conditions
-print("Initial conditions:", initial_conditions)
-
 # Time span for the simulation
-t_span = [0, 4000000]
+t_span = [0, 40000000]
 
 # Function to solve a part of the ODE
 def solve_ode_chunk(t_chunk, initial_conditions, tree, u_values, v_values):
@@ -127,21 +119,25 @@ if __name__ == '__main__':
 
     final_y = np.concatenate(final_y, axis=1)
 
-    # Print final trajectory points
-    print("Final trajectory points (first few):")
-    print(final_y[:, :10])
-
     # Plotting results
-    def read_and_plot_data(file_path, skip_interval=20, scale_factor=50, frame_interval=10):
+    def read_and_plot_data(file_path, skip_interval=1, scale_factor=50, frame_interval=10):
         try:
-            # Use the same velocity data already loaded
-            data = velocity_data
+            # Load data
+            data = pd.read_csv(file_path)
 
+            # Clean column names if necessary
+            data.columns = data.columns.str.strip()
+            data['x'] *= 1e6
+            data['y'] *= 1e6
+
+            # Convert velocity to cm/s
+            data['u'] *= 100
+            data['v'] *= 100
             # Extract data for plotting
             X = data['x'].values
             Y = data['y'].values
-            U = data['u2'].values
-            V = data['v2'].values
+            U = data['u'].values
+            V = data['v'].values
 
             # Skipping data points to reduce density
             X_skipped = X[::skip_interval]
@@ -179,10 +175,10 @@ if __name__ == '__main__':
                 fig, ax = plt.subplots(figsize=(10, 5))
                 ax.quiver(X_masked, Y_masked, U_masked, V_masked, color=colors[mask], scale=scale_factor, alpha=1.0)
                 cbar = fig.colorbar(plt.cm.ScalarMappable(norm=norm, cmap='viridis'), ax=ax)
-                cbar.set_label('Velocity Magnitude (cm/s)')
+                cbar.set_label('Velocity Magnitude')
                 ax.set_title('Velocity Vector Plot with Transparent Arrows')
-                ax.set_xlabel('X Coordinate (micrometers)')
-                ax.set_ylabel('Y Coordinate (micrometers)')
+                ax.set_xlabel('X Coordinate')
+                ax.set_ylabel('Y Coordinate')
                 ax.axis('equal')
                 ax.grid(True, alpha=0.3)
 
@@ -209,8 +205,12 @@ if __name__ == '__main__':
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
 
-    # Call the function to plot the data
-    read_and_plot_data(None, frame_interval=20)  # Save every 20th frame
+    # Example usage
+    # file_path = REPO_ROOT / "data" / "comsol" / "Normalized_60_cm.csv"
+    file_path = REPO_ROOT / "data" / "comsol" / "Velocity_60_cm_Full_scaled.csv"
+    
+    
+    read_and_plot_data(file_path, frame_interval=20)  # Save every 20th frame
 
     # To create a video from the images using ffmpeg:
     # Open a command prompt and navigate to the directory containing the images.

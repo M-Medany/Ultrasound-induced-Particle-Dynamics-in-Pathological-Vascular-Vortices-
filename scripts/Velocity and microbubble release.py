@@ -1,6 +1,5 @@
-
+# spawn_safe_mb.py
 import os
-import argparse
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -8,17 +7,20 @@ from scipy.integrate import solve_ivp
 from scipy.spatial import cKDTree
 from multiprocessing import get_context, cpu_count
 
-# ===================== USER CONFIG (defaults) =====================
-DEFAULT_CSV_PATH = r"C:\Users\M4\VSCode_Projects\Ultrasound-Swarm-Microbubbles-Navigating-Vortices-to-Target-and-Fill-Aneurysms\Excel_data_velocity_comsol\Normalized_60_cm.csv"
+from pathlib import Path as _Path
+REPO_ROOT = _Path(__file__).resolve().parents[1]
+
+
+# ===================== USER CONFIG =====================
+CSV_PATH = REPO_ROOT / "data" / "comsol" / "Velocity_2d_5cm.csv"
 
 rho = 1000.0      # density
-CD  = 2           # quadratic drag coeff
-Gamma = 0.1       # circulation (CSV-units^2 / time)
+CD  = 2         # quadratic drag coeff
+Gamma = 0.1    # circulation (CSV-units^2 / time)
 a_override = None # e.g., set 60.0 to force; otherwise auto
 CENTER_OVERRIDE = None
-
-# Initial state (if outside domain, will be auto-relocated to domain center)
-x0, y0 = 4100.0, 170.0
+# Initial state (must be inside CSV domain)
+x0, y0 = 4100, 170.0
 u0, v0 = 0.0, 0.0
 
 # Time
@@ -51,6 +53,9 @@ XMAX = None
 YMIN = None
 YMAX = None
 
+# ----------------- Physics helpers (top-level) -----------------
+
+
 
 def estimate_vortex_center(df):
     X = df["x"].values; Y = df["y"].values
@@ -62,7 +67,7 @@ def estimate_vortex_center(df):
     m = (Y > ymin + 25) & (Y < ymax - 25) & (speed > np.percentile(speed, 30))
     X = X[m]; Y = Y[m]; U = U[m]; V = V[m]
     if X.size < 200:
-        # fallback to centroid if masking got too aggressive or data are near-zero
+        # fallback to centroid if masking got too aggressive
         return float(np.median(df["x"])), float(np.median(df["y"]))
 
     # candidate grid (dense enough but fast)
@@ -142,7 +147,7 @@ def solve_ode_chunk(t0, t1, Yinit):
     sol = solve_ivp(
         rhs, [t0, t1], Yinit, method="RK45",
         rtol=RTOL, atol=ATOL, max_step=max_step,
-        dense_output=True, events=out_of_bounds
+        dense_output=True, events=out_of_bounds   # <<< here
     )
     return sol.t, sol.y
 
@@ -150,9 +155,9 @@ def solve_ode_chunk(t0, t1, Yinit):
 # ------------- Worker initializer (runs in each child) ----------
 def init_worker(points, u_values, v_values, xc, yc, a, gamma, rho, cd,
                 rtol, atol, chunk_steps_target,
-                xmin, xmax, ymin, ymax):
+                xmin, xmax, ymin, ymax):      # <<< add these
     global TREE, UVAL, VVAL, XC, YC, A, GAM, RHO, CDG, RTOL, ATOL, CHUNK_STEPS_TARGET
-    global XMIN, XMAX, YMIN, YMAX
+    global XMIN, XMAX, YMIN, YMAX            # <<< add these
     TREE = cKDTree(points)
     UVAL = u_values
     VVAL = v_values
@@ -160,18 +165,17 @@ def init_worker(points, u_values, v_values, xc, yc, a, gamma, rho, cd,
     A, GAM, RHO, CDG = a, gamma, rho, cd
     RTOL, ATOL = rtol, atol
     CHUNK_STEPS_TARGET = chunk_steps_target
-    XMIN, XMAX, YMIN, YMAX = xmin, xmax, ymin, ymax
+    XMIN, XMAX, YMIN, YMAX = xmin, xmax, ymin, ymax   # <<< add these
 
 
-def main(csv_path, start_x=None, start_y=None):
-    print(f"Reading velocity data from: {csv_path}")
-    vf = pd.read_csv(csv_path)
-    vf.columns = vf.columns.str.strip().str.lower()
 
-    # Try to find required columns
-    required = {'x','y','u','v'}
-    if not required.issubset(vf.columns):
-        raise ValueError(f"CSV must contain columns {required}, found {set(vf.columns)}")
+
+# ============================== MAIN ===========================
+def main():
+    print("Reading velocity data ...")
+    vf = pd.read_csv(CSV_PATH)
+    vf.columns = vf.columns.str.strip()
+    assert {'x','y','u','v'} <= set(vf.columns), "CSV must contain x,y,u,v"
 
     points = vf[['x','y']].values
     u_values = vf['u'].values
@@ -181,33 +185,26 @@ def main(csv_path, start_x=None, start_y=None):
     ymin, ymax = points[:,1].min(), points[:,1].max()
     print(f"Domain x:[{xmin},{xmax}], y:[{ymin},{ymax}]  (CSV units)")
 
-    # Initial position logic
-    sx = start_x if start_x is not None else x0
-    sy = start_y if start_y is not None else y0
-    if not (xmin <= sx <= xmax and ymin <= sy <= ymax):
-        sx = 0.5*(xmin + xmax)
-        sy = 0.5*(ymin + ymax)
-        print(f"Note: Initial (x0,y0) was outside domain. Using domain center: ({sx},{sy})")
+    if not (xmin <= x0 <= xmax and ymin <= y0 <= ymax):
+        raise ValueError(f"Initial (x0,y0)=({x0},{y0}) outside CSV domain.")
 
     print("Estimating vortex center ...")
     xc, yc = estimate_vortex_center(vf)
 
-    # manual override
+    # manual override (set CENTER_OVERRIDE at the top next to your other config)
     if CENTER_OVERRIDE is not None:
         xc, yc = CENTER_OVERRIDE
 
     print(f"Center (used): (xc,yc)=({xc:.3f},{yc:.3f})")
 
+
     if a_override is None:
         r = np.hypot(vf["x"].values - xc, vf["y"].values - yc)
         s = np.hypot(vf["u"].values, vf["v"].values)
         m = (vf["y"].values > vf["y"].min() + 25) & (s > np.percentile(s, 30))
-        if np.any(m):
-            r_peak = r[m][s[m].argmax()]
-            A_local = float(r_peak)
-        else:
-            A_local = 0.25 * min(xmax - xmin, ymax - ymin)  # fallback if speeds ~0
-        print(f"Core radius a: {A_local:.3f}")
+        r_peak = r[m][s[m].argmax()]
+        A_local = float(r_peak)
+        print(f"Core radius a from peak speed: {A_local:.3f}")
     else:
         A_local = float(a_override)
         print(f"Core radius a (override): {A_local:.3f}")
@@ -227,7 +224,7 @@ def main(csv_path, start_x=None, start_y=None):
                   initargs=(points, u_values, v_values, xc, yc, A_local,
                             Gamma, rho, CD, rtol, atol, chunk_steps_target, xmin, xmax, ymin, ymax)) as pool:
         # first
-        Yprev = [sx, sy, u0, v0]
+        Yprev = [x0, y0, u0, v0]
         results.append(pool.apply_async(solve_ode_chunk, args=(intervals[0][0], intervals[0][1], Yprev)))
         # chain
         for i in range(1, num_chunks):
@@ -316,11 +313,6 @@ def main(csv_path, start_x=None, start_y=None):
     save_frames()
     save_static()
 
-
+# Windows/VS Code needs this guard for multiprocessing
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Spawn-safe MB trajectory with arbitrary velocity CSV.")
-    parser.add_argument("--csv", type=str, default=DEFAULT_CSV_PATH, help="Path to CSV with columns x,y,u,v.")
-    parser.add_argument("--x0", type=float, default=None, help="Initial x position (CSV units).")
-    parser.add_argument("--y0", type=float, default=None, help="Initial y position (CSV units).")
-    args = parser.parse_args()
-    main(args.csv, start_x=args.x0, start_y=args.y0)
+    main()

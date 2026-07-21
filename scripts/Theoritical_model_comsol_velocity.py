@@ -4,6 +4,10 @@ from scipy.integrate import solve_ivp
 from scipy.spatial import cKDTree
 import matplotlib.pyplot as plt
 
+from pathlib import Path as _Path
+REPO_ROOT = _Path(__file__).resolve().parents[1]
+
+
 # Constants
 Gamma = 10  # 6.5
 rho = 1000
@@ -13,7 +17,7 @@ p_inf = 1e5
 
 # Read velocity data from CSV
 print("Reading velocity data from CSV...")
-velocity_data = pd.read_csv(r'C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Excel_data_velocity_comsol\Normalized_60_cm.csv')
+velocity_data = pd.read_csv(REPO_ROOT / "data" / "comsol" / "Normalized_60_cm.csv")
 velocity_data['x'] *= 1e6
 velocity_data['y'] *= 1e6
 

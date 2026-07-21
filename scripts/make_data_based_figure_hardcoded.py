@@ -14,10 +14,14 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.spatial import cKDTree
 
+from pathlib import Path as _Path
+REPO_ROOT = _Path(__file__).resolve().parents[1]
+
+
 # ======================== USER INPUT ========================
-CSV_PATH   = r"C:\Users\M4\VSCode_Projects\Ultrasound-Swarm-Microbubbles-Navigating-Vortices-to-Target-and-Fill-Aneurysms\Excel_data_velocity_comsol\Velocity_2d_5cm.csv"
+CSV_PATH   = REPO_ROOT / "data" / "comsol" / "Velocity_2d_5cm.csv"
 # 👉 point this at your two-bubble CSV:
-TRAJ_PATH  = r"C:\Users\M4\VSCode_Projects\Ultrasound-Swarm-Microbubbles-Navigating-Vortices-to-Target-and-Fill-Aneurysms\trajectory_two_mb.csv"
+TRAJ_PATH  = REPO_ROOT / "trajectory_two_mb.csv"
 
 GAMMA      = 0.95       # Circulation Γ (same units as your CSV)
 RHO        = 1000.0     # Fluid density

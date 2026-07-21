@@ -3,20 +3,28 @@ import numpy as np
 from scipy.integrate import solve_ivp
 from scipy.spatial import cKDTree
 import matplotlib.pyplot as plt
+import os
 from multiprocessing import Pool, cpu_count
-from tqdm import tqdm
+
+from pathlib import Path as _Path
+REPO_ROOT = _Path(__file__).resolve().parents[1]
+
 
 # Constants
 Gamma = 10
 rho = 1000
-a = 0.005
-CD = 1
+a = 50
+CD = 1.5
 p_inf = 1e5
+
+# Create a directory to save images
+output_dir = 'output_images'
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
 
 # Read velocity data from CSV
 print("Reading velocity data from CSV...")
-# velocity_data = pd.read_csv(r'C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Excel_data_velocity_comsol\Normalized_Velocity_2d_5cm.csv')
-velocity_data = pd.read_csv(r'C:\Users\M4\VSCode_Projects\Ultrasound-Swarm-Microbubbles-Navigating-Vortices-to-Target-and-Fill-Aneurysms\Excel_data_velocity_comsol\Normalized_Velocity_2d_5cm.csv')
+velocity_data = pd.read_csv(REPO_ROOT / "data" / "comsol" / "Normalized_Velocity_2d_5cm.csv")
 
 # Clean column names if necessary
 velocity_data.columns = velocity_data.columns.str.strip()
@@ -57,25 +65,35 @@ def pressure_gradient(x, y, r):
 
 # Dynamics function equivalent to MATLAB's microbubbleDynamics
 def microbubble_dynamics(t, Y, tree, u_values, v_values):
-    x, y, u_MBx, u_MBy = Y
-    r = np.sqrt(x ** 2 + y ** 2)
-    u = velocity_field(x, y, tree, u_values, v_values)
-    grad_p = pressure_gradient(x, y, r)
-    
-    dxdt = u_MBx
-    dydt = u_MBy
-    du_MBx_dt = (3 / rho) * grad_p[0] + 3 / 4 * CD * (u[0] - u_MBx) * abs(u[0] - u_MBx)
-    du_MBy_dt = (3 / rho) * grad_p[1] + 3 / 4 * CD * (u[1] - u_MBy) * abs(u[1] - u_MBy)
-    
-    return [dxdt, dydt, du_MBx_dt, du_MBy_dt]
+    Y = Y.reshape(-1, 4)  # Reshape Y to handle multiple particles
+    dydt = []
+    for i in range(Y.shape[0]):
+        x, y, u_MBx, u_MBy = Y[i]
+        r = np.sqrt(x ** 2 + y ** 2)
+        u = velocity_field(x, y, tree, u_values, v_values)
+        grad_p = pressure_gradient(x, y, r)
+        
+        dxdt = u_MBx
+        dydt_particle = u_MBy
+        du_MBx_dt = (3 / rho) * grad_p[0] + 3 / 4 * CD * (u[0] - u_MBx) * abs(u[0] - u_MBx)
+        du_MBy_dt = (3 / rho) * grad_p[1] + 3 / 4 * CD * (u[1] - u_MBy) * abs(u[1] - u_MBy)
+        
+        dydt.extend([dxdt, dydt_particle, du_MBx_dt, du_MBy_dt])
+    return np.array(dydt)
 
-# Initial conditions
-x0 = [130, 50]
-u_MB0 = [0, 0]
-initial_conditions = x0 + u_MB0
+# Initial conditions for multiple particles
+initial_conditions_list = [
+    [130, 50, 0, 0],
+    [130, 70, 0, 0],
+    [140, 70, 0, 0],
+    [135, 80, 0, 0],
+    [150, 90, 0, 0],
+    [130, 60, 0, 0]
+]
+initial_conditions = np.concatenate(initial_conditions_list)
 
 # Time span for the simulation
-t_span = [0, 2000000]
+t_span = [0, 4000000]
 
 # Function to solve a part of the ODE
 def solve_ode_chunk(t_chunk, initial_conditions, tree, u_values, v_values):
@@ -99,7 +117,7 @@ if __name__ == '__main__':
                 results.append(pool.apply_async(solve_ode_chunk, args=(time_intervals[i], initial_conditions, tree, u_values, v_values)))
             else:
                 prev_t, prev_y = results[i - 1].get()
-                initial_conditions_list[i] = [prev_y[0, -1], prev_y[1, -1], prev_y[2, -1], prev_y[3, -1]]
+                initial_conditions_list[i] = prev_y[:, -1].flatten()  # Update initial conditions for the next chunk
                 results.append(pool.apply_async(solve_ode_chunk, args=(time_intervals[i], initial_conditions_list[i], tree, u_values, v_values)))
 
         final_t = []
@@ -112,7 +130,7 @@ if __name__ == '__main__':
     final_y = np.concatenate(final_y, axis=1)
 
     # Plotting results
-    def read_and_plot_data(file_path, skip_interval=10, scale_factor=30):
+    def read_and_plot_data(file_path, skip_interval=20, scale_factor=50, frame_interval=10):
         try:
             # Load data
             data = pd.read_csv(file_path)
@@ -145,47 +163,54 @@ if __name__ == '__main__':
             norm = plt.Normalize(magnitudes.min(), magnitudes.max())
             colors = plt.cm.viridis(norm(magnitudes))
 
-            # Create the plot
-            fig, ax = plt.subplots(figsize=(10, 5))
-            quiver = ax.quiver(X_skipped, Y_skipped, U_normalized, V_normalized, color=colors, scale=scale_factor, alpha=0.5)
-            cbar = fig.colorbar(plt.cm.ScalarMappable(norm=norm, cmap='viridis'), ax=ax)
-            cbar.set_label('Velocity Magnitude')
-            ax.set_title('Velocity Vector Plot with Transparent Arrows')
-            ax.set_xlabel('X Coordinate')
-            ax.set_ylabel('Y Coordinate')
-            ax.axis('equal')
-            ax.grid(True, alpha=0.3)
-
-            # Plot trajectory on top of the velocity field with a mask
+            # Plot trajectory with a cleared region behind it
             mask_radius = 10  # Adjust the radius of the mask as needed
-            mask = np.full_like(X_skipped, True, dtype=bool)
 
-            for i in range(len(final_y[0])):
+            for i in range(0, len(final_y[0]), frame_interval):
+                mask = np.full_like(X_skipped, True, dtype=bool)
                 distances = np.sqrt((X_skipped - final_y[0, i])**2 + (Y_skipped - final_y[1, i])**2)
-                mask = np.logical_and(mask, distances > mask_radius)
+                mask = distances > mask_radius
 
-            X_masked = X_skipped[mask]
-            Y_masked = Y_skipped[mask]
-            U_masked = U_normalized[mask]
-            V_masked = V_normalized[mask]
+                X_masked = X_skipped[mask]
+                Y_masked = Y_skipped[mask]
+                U_masked = U_normalized[mask]
+                V_masked = V_normalized[mask]
 
-            # Create a new quiver plot with the masked data
-            fig, ax = plt.subplots(figsize=(10, 5))
-            ax.quiver(X_masked, Y_masked, U_masked, V_masked, color=colors[mask], scale=scale_factor, alpha=0.5)
-            cbar = fig.colorbar(plt.cm.ScalarMappable(norm=norm, cmap='viridis'), ax=ax)
-            cbar.set_label('Velocity Magnitude')
-            ax.set_title('Velocity Vector Plot with Transparent Arrows')
-            ax.set_xlabel('X Coordinate')
-            ax.set_ylabel('Y Coordinate')
-            ax.axis('equal')
-            ax.grid(True, alpha=0.3)
+                # Create a new quiver plot with the masked data
+                fig, ax = plt.subplots(figsize=(10, 5))
+                ax.quiver(X_masked, Y_masked, U_masked, V_masked, color=colors[mask], scale=scale_factor, alpha=1.0)
+                cbar = fig.colorbar(plt.cm.ScalarMappable(norm=norm, cmap='viridis'), ax=ax)
+                cbar.set_label('Velocity Magnitude')
+                ax.set_title('Velocity Vector Plot with Transparent Arrows')
+                ax.set_xlabel('X Coordinate')
+                ax.set_ylabel('Y Coordinate')
+                ax.axis('equal')
+                ax.grid(True, alpha=0.3)
 
-            # Plot the trajectory
-            ax.plot(final_y[0], final_y[1], 'r-', linewidth=2, color='black')
-            ax.plot(final_y[0, 0], final_y[1, 0], 'go', markerfacecolor='g', markersize=8)  # Start point
-            ax.plot(final_y[0, -1], final_y[1, -1], 'ro', markerfacecolor='r', markersize=8)  # End point
-            plt.savefig('velocity_Trajectory_plot.png', dpi=300)
-            plt.show()
+                # Plot the trajectory for each particle
+                num_particles = 6
+                for j in range(num_particles):
+                    idx = j * 4
+                    ax.plot(final_y[idx, :i+1], final_y[idx+1, :i+1], 'k-', linewidth=1.5)  # Black trajectory line
+                    if i == 0:
+                        ax.plot(final_y[idx, 0], final_y[idx+1, 0], 'go', markerfacecolor='g', markersize=8)  # Start point in green
+
+                    # Draw a fully opaque white circle around the particle
+                    particle_x, particle_y = final_y[idx, i], final_y[idx+1, i]
+                    circle = plt.Circle((particle_x, particle_y), 1.1 * mask_radius, color='white', alpha=1.0)
+                    ax.add_patch(circle)
+
+                # Draw red dots for each particle to ensure they are on top
+                for j in range(num_particles):
+                    idx = j * 4
+                    particle_x, particle_y = final_y[idx, i], final_y[idx+1, i]
+                    ax.plot(particle_x, particle_y, 'ro', markersize=6)  # Red dot
+
+                # Save the figure
+                plt.savefig(f"{output_dir}/frame_{i:04d}.png", dpi=300)
+
+                # Close the plot to avoid memory issues
+                plt.close(fig)
 
         except FileNotFoundError:
             print(f"Error: The file at {file_path} was not found.")
@@ -195,7 +220,10 @@ if __name__ == '__main__':
             print(f"An unexpected error occurred: {e}")
 
     # Example usage
-    # file_path = r'C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Excel_data_velocity_comsol\Normalized_Velocity_2d_5cm.csv'
-    file_path = r'C:\Users\M4\VSCode_Projects\Ultrasound-Swarm-Microbubbles-Navigating-Vortices-to-Target-and-Fill-Aneurysms\Excel_data_velocity_comsol\Normalized_Velocity_2d_5cm.csv'
+    file_path = REPO_ROOT / "data" / "comsol" / "Normalized_Velocity_2d_5cm.csv"
+    read_and_plot_data(file_path, frame_interval=20)  # Save every 20th frame
 
-    read_and_plot_data(file_path)
+    # To create a video from the images using ffmpeg:
+    # Open a command prompt and navigate to the directory containing the images.
+    # Run the following command:
+    # ffmpeg -framerate 30 -i frame_%04d.png -c:v libx264 -pix_fmt yuv420p output_video.mp4

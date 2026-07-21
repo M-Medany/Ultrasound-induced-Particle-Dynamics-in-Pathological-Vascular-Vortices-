@@ -2,6 +2,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
+from pathlib import Path as _Path
+REPO_ROOT = _Path(__file__).resolve().parents[1]
+
+
 def read_and_plot_data(file_path, skip_interval=2, scale_factor=80,
                        position_scale=1e6, velocity_scale=100.0):
     try:
@@ -81,8 +85,8 @@ def read_and_plot_data(file_path, skip_interval=2, scale_factor=80,
 
 # Example usage
 # file_path = r'C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Velocity_2d_5cm.csv'  # Use a raw string for Windows paths
-# file_path = r'C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Excel_data_velocity_comsol\Normalized_60_cm.csv'  # Use a raw string for Windows paths
-file_path = r'C:\Users\M4\VSCode_Projects\Ultrasound-Swarm-Microbubbles-Navigating-Vortices-to-Target-and-Fill-Aneurysms\Excel_data_velocity_comsol\Normalized_Velocity_60_cm_Full.csv'
+# file_path = REPO_ROOT / "data" / "comsol" / "Normalized_60_cm.csv"  # Use a raw string for Windows paths
+file_path = REPO_ROOT / "data" / "comsol" / "Normalized_Velocity_60_cm_Full.csv"
 
 # file_path = r'C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Normalized_Velocity_2d_5cm.csv'  # Use a raw string for Windows paths
 

@@ -55,14 +55,14 @@ pip install -r requirements.txt
 Run the capture solver:
 
 ```bash
-python "Velocity of two microbubble release_general_velocity.py"
+python "scripts/Velocity of two microbubble release_general_velocity.py"
 ```
 
 Parameters are in the `USER CONFIG` block at the top of the script:
 
 | Parameter | Default | Meaning |
 |---|---|---|
-| `CSV_PATH` | `Excel_data_velocity_comsol/Velocity_2d_5cm.csv` | COMSOL carrier field |
+| `CSV_PATH` | `data/comsol/Velocity_2d_5cm.csv` | COMSOL carrier field |
 | `rho` | `1000.0` | Fluid density (kg m⁻³) |
 | `CD` | `5` | Effective quadratic drag constant |
 | `Gamma` | `0.95` | Circulation (CSV units) |
@@ -81,15 +81,15 @@ Requires Python 3.11. Tested on Windows with the pinned versions in [`requiremen
 | Manuscript figure | Source |
 |---|---|
 | Fig. 2B — velocity profile, polar plot | [`Plotting_filling_Aneurysm.ipynb`](Plotting_filling_Aneurysm.ipynb) cells 22–23 ← `PIV_Velocity_Vortex_center.csv` |
-| Fig. 2D–E — simulated MB capture | [`Velocity of two microbubble release_general_velocity.py`](Velocity%20of%20two%20microbubble%20release_general_velocity.py) |
-| Fig. 2E inset — Rankine pressure well | [`make_rankine_schematic.py`](make_rankine_schematic.py) |
+| Fig. 2D–E — simulated MB capture | [`scripts/Velocity of two microbubble release_general_velocity.py`](scripts/Velocity%20of%20two%20microbubble%20release_general_velocity.py) |
+| Fig. 2E inset — Rankine pressure well | [`scripts/make_rankine_schematic.py`](scripts/make_rankine_schematic.py) |
 | Fig. 3F — cluster area at ejection | notebook cells 12–16, 21 ← `Bubble_shooting[_updated].csv` |
 | Fig. 3G — US on/off control | notebook cells 10–11 |
 | Fig. 4D — pulsatile cavity filling | notebook cells 6–7 ← `Filling_Mean_Pulsatile.csv` |
 | Fig. S5 — ejection speed traces (n = 5) | notebook cells 17–20 |
 | Fig. S6B — continuous cavity filling | notebook cells 3–5 ← `Filling_Mean_STD.csv` |
 
-> **Which solver is canonical.** Several exploratory variants of the trajectory solver are kept in the repository root (different flow speeds, drag constants, normalisations, and an experimental acoustic-bias branch). They document the parameter exploration but are **not** the manuscript implementation. Use `Velocity of two microbubble release_general_velocity.py`.
+> **Which solver is canonical.** Several exploratory variants of the trajectory solver are kept in [`scripts/`](scripts/) (different flow speeds, drag constants, normalisations, and an experimental acoustic-bias branch). They document the parameter exploration but are **not** the manuscript implementation. Use `scripts/Velocity of two microbubble release_general_velocity.py`.
 
 ---
 
@@ -97,9 +97,10 @@ Requires Python 3.11. Tested on Windows with the pinned versions in [`requiremen
 
 | Path | Contents |
 |---|---|
-| [`Excel_data/`](Excel_data/) | Experimental measurements: filling fractions, cluster areas, PIV vortex-centre velocities |
-| [`Excel_data_velocity_comsol/`](Excel_data_velocity_comsol/) | COMSOL velocity fields, columns `x, y, u, v` |
+| [`scripts/`](scripts/) | Model implementations, tracking code, and figure scripts |
+| [`data/experimental/`](data/experimental/) | Experimental measurements: filling fractions, cluster areas, PIV vortex-centre velocities |
+| [`data/comsol/`](data/comsol/) | COMSOL velocity fields, columns `x, y, u, v` |
 | [`Figures/`](Figures/) | Generated figure outputs (PNG + SVG) |
 | [`Videos/`](Videos/), [`Video_tracking/`](Video_tracking/) | Experimental footage and animations |
-| [`Manual_traking.py`](Manual_traking.py) | `EuclideanDistTracker` — nearest-neighbour ID assignment across frames |
-| [`Bubble_tracking.py`](Bubble_tracking.py) | MOG2 background subtraction → contour detection → per-ID trajectory overlay |
+| [`scripts/Manual_traking.py`](scripts/Manual_traking.py) | `EuclideanDistTracker` — nearest-neighbour ID assignment across frames |
+| [`scripts/Bubble_tracking.py`](scripts/Bubble_tracking.py) | MOG2 background subtraction → contour detection → per-ID trajectory overlay |

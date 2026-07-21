@@ -2,6 +2,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
+from pathlib import Path as _Path
+REPO_ROOT = _Path(__file__).resolve().parents[1]
+
+
 # Define the function to read and plot 2D velocity vectors
 def read_and_plot_data_2d(file_path, skip_interval=2, scale_factor=70):
     try:
@@ -75,5 +79,5 @@ def read_and_plot_data_2d(file_path, skip_interval=2, scale_factor=70):
         print(f"An unexpected error occurred: {e}")
 
 # Example usage
-file_path = r'C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Excel_data_velocity_comsol\Velocity_60_cm_Full_scaled.csv'  # Use the provided file path
+file_path = REPO_ROOT / "data" / "comsol" / "Velocity_60_cm_Full_scaled.csv"  # Use the provided file path
 read_and_plot_data_2d(file_path)

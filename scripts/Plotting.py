@@ -2,8 +2,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
+from pathlib import Path as _Path
+REPO_ROOT = _Path(__file__).resolve().parents[1]
+
+
 # Read the CSV file
-df = pd.read_csv('Excel_data/PIV_Velocity_Vortex_center.csv')
+df = pd.read_csv(REPO_ROOT / "data" / "experimental" / "PIV_Velocity_Vortex_center.csv")
 df.columns = ['Distance', 'Velocity', 'StdDev']
 
 # Set up the 3D plot

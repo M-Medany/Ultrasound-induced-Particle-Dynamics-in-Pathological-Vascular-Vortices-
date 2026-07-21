@@ -3,20 +3,24 @@ import numpy as np
 from scipy.integrate import solve_ivp
 from scipy.spatial import cKDTree
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 from multiprocessing import Pool, cpu_count
 from tqdm import tqdm
+
+from pathlib import Path as _Path
+REPO_ROOT = _Path(__file__).resolve().parents[1]
+
 
 # Constants
 Gamma = 10
 rho = 1000
-a = 50
-CD = 1.5
+a = 0.005
+CD = 1
 p_inf = 1e5
 
 # Read velocity data from CSV
 print("Reading velocity data from CSV...")
-velocity_data = pd.read_csv(r'C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Excel_data_velocity_comsol\Normalized_Velocity_2d_5cm.csv')
+# velocity_data = pd.read_csv(REPO_ROOT / "data" / "comsol" / "Normalized_Velocity_2d_5cm.csv")
+velocity_data = pd.read_csv(REPO_ROOT / "data" / "comsol" / "Normalized_Velocity_2d_5cm.csv")
 
 # Clean column names if necessary
 velocity_data.columns = velocity_data.columns.str.strip()
@@ -70,12 +74,12 @@ def microbubble_dynamics(t, Y, tree, u_values, v_values):
     return [dxdt, dydt, du_MBx_dt, du_MBy_dt]
 
 # Initial conditions
-x0 = [100, 50]
+x0 = [130, 50]
 u_MB0 = [0, 0]
 initial_conditions = x0 + u_MB0
 
 # Time span for the simulation
-t_span = [0, 5000000]
+t_span = [0, 2000000]
 
 # Function to solve a part of the ODE
 def solve_ode_chunk(t_chunk, initial_conditions, tree, u_values, v_values):
@@ -146,29 +150,45 @@ if __name__ == '__main__':
             colors = plt.cm.viridis(norm(magnitudes))
 
             # Create the plot
-            fig = plt.figure(figsize=(12, 8))
-            ax = fig.add_subplot(111, projection='3d')
-
-            # Plot velocity field in z=0 plane
-            ax.quiver(X_skipped, Y_skipped, 0, U_normalized, V_normalized, 0, color=colors, length=0.1, alpha=0.5)
-
-            # Plot trajectory in z=0.2 plane
-            ax.plot(final_y[0], final_y[1], zs=0.2, zdir='z', color='black', linewidth=2, label='Trajectory')
-            ax.scatter(final_y[0, 0], final_y[1, 0], zs=0.2, zdir='z', color='green', marker='o', s=50, label='Start Point')  # Start point
-            ax.scatter(final_y[0, -1], final_y[1, -1], zs=0.2, zdir='z', color='red', marker='o', s=50, label='End Point')  # End point
-
-            # Set labels and title
+            fig, ax = plt.subplots(figsize=(10, 5))
+            quiver = ax.quiver(X_skipped, Y_skipped, U_normalized, V_normalized, color=colors, scale=scale_factor, alpha=0.5)
+            cbar = fig.colorbar(plt.cm.ScalarMappable(norm=norm, cmap='viridis'), ax=ax)
+            cbar.set_label('Velocity Magnitude')
+            ax.set_title('Velocity Vector Plot with Transparent Arrows')
             ax.set_xlabel('X Coordinate')
             ax.set_ylabel('Y Coordinate')
-            ax.set_zlabel('Z Coordinate')
-            ax.set_title('3D Plot of Velocity Field and Trajectory')
+            ax.axis('equal')
+            ax.grid(True, alpha=0.3)
 
-            # Add a legend
-            ax.legend()
+            # Plot trajectory on top of the velocity field with a mask
+            mask_radius = 10  # Adjust the radius of the mask as needed
+            mask = np.full_like(X_skipped, True, dtype=bool)
 
-            # Set z-axis limits to better visualize the planes
-            ax.set_zlim(0, 1)
+            for i in range(len(final_y[0])):
+                distances = np.sqrt((X_skipped - final_y[0, i])**2 + (Y_skipped - final_y[1, i])**2)
+                mask = np.logical_and(mask, distances > mask_radius)
 
+            X_masked = X_skipped[mask]
+            Y_masked = Y_skipped[mask]
+            U_masked = U_normalized[mask]
+            V_masked = V_normalized[mask]
+
+            # Create a new quiver plot with the masked data
+            fig, ax = plt.subplots(figsize=(10, 5))
+            ax.quiver(X_masked, Y_masked, U_masked, V_masked, color=colors[mask], scale=scale_factor, alpha=0.5)
+            cbar = fig.colorbar(plt.cm.ScalarMappable(norm=norm, cmap='viridis'), ax=ax)
+            cbar.set_label('Velocity Magnitude')
+            ax.set_title('Velocity Vector Plot with Transparent Arrows')
+            ax.set_xlabel('X Coordinate')
+            ax.set_ylabel('Y Coordinate')
+            ax.axis('equal')
+            ax.grid(True, alpha=0.3)
+
+            # Plot the trajectory
+            ax.plot(final_y[0], final_y[1], 'r-', linewidth=2, color='black')
+            ax.plot(final_y[0, 0], final_y[1, 0], 'go', markerfacecolor='g', markersize=8)  # Start point
+            ax.plot(final_y[0, -1], final_y[1, -1], 'ro', markerfacecolor='r', markersize=8)  # End point
+            plt.savefig('velocity_Trajectory_plot.png', dpi=300)
             plt.show()
 
         except FileNotFoundError:
@@ -179,5 +199,7 @@ if __name__ == '__main__':
             print(f"An unexpected error occurred: {e}")
 
     # Example usage
-    file_path = r'C:\Users\mmabo\V_Code\New folder\Aneurysm_filling\Excel_data_velocity_comsol\Normalized_Velocity_2d_5cm.csv'
+    # file_path = REPO_ROOT / "data" / "comsol" / "Normalized_Velocity_2d_5cm.csv"
+    file_path = REPO_ROOT / "data" / "comsol" / "Normalized_Velocity_2d_5cm.csv"
+
     read_and_plot_data(file_path)
