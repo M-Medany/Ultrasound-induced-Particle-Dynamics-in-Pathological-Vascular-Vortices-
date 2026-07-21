@@ -104,3 +104,13 @@ Requires Python 3.11. Tested on Windows with the pinned versions in [`requiremen
 | [`Videos/`](Videos/), [`Video_tracking/`](Video_tracking/) | Experimental footage and animations |
 | [`scripts/Manual_traking.py`](scripts/Manual_traking.py) | `EuclideanDistTracker` — nearest-neighbour ID assignment across frames |
 | [`scripts/Bubble_tracking.py`](scripts/Bubble_tracking.py) | MOG2 background subtraction → contour detection → per-ID trajectory overlay |
+
+---
+
+## License
+
+- **Code** ([`scripts/`](scripts/), notebooks) — [MIT License](LICENSE)
+- **Data and media** ([`data/`](data/), [`Figures/`](Figures/), [`Videos/`](Videos/)) — [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+
+Reuse of either is permitted with attribution.
+
