@@ -10,6 +10,8 @@ Code and data accompanying the manuscript:
 > <sup>3</sup> Department of Mechanical & Materials Engineering, University of Nebraska-Lincoln, USA
 >
 > \*Corresponding author: daniel.ahmed@unibe.ch
+>
+> **Preprint:** [doi.org/10.1101/2025.10.23.684129](https://doi.org/10.1101/2025.10.23.684129)
 
 ---
 
