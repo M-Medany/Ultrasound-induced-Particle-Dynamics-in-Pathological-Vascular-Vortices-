@@ -160,7 +160,7 @@ def kNN_velocity_field(x, y, k=8, eps=1e-12):
 
 def dp_dr_rankine(r, Gamma, rho, a):
     if r < a:
-        return (rho * Gamma**2) / (4*np.pi**2) * (r / (a*a))
+        return (rho * Gamma**2) / (4*np.pi**2) * (r / (a**4))
     else:
         return (rho * Gamma**2) / (4*np.pi**2) * (1.0 / (r**3))
 

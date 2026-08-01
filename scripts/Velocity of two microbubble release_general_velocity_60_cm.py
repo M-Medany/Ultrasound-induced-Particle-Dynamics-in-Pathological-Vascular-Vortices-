@@ -22,7 +22,7 @@ ImageFile.MAXBLOCK = 1 << 24
 
 # ===================== USER CONFIG =====================
 
-CSV_PATH = REPO_ROOT / "data" / "comsol" / "Normalized_Velocity_60_cm_Full.csv"
+CSV_PATH = REPO_ROOT / "data" / "comsol" / "Depth_averaged_Velocity_60_cm.csv"  # z-averaged over all 100 COMSOL layers to denoise the sparse in-plane mesh
 
 # CSV units & normalization
 CSV_POS_UNITS = 'm'          # {'m','mm','um'}
@@ -35,8 +35,25 @@ DISPLAY_POS_UNITS = 'um'
 DISPLAY_VEL_UNITS = 'cm/s'
 
 # Starting ROI near the swirl (µm). Will auto-expand if sparse.
-CENTER_ROI_UM = (80.0, 180.0, 110.0, 190.0)  # xlo, xhi, ylo, yhi  ← aims near (x≈110,y≈140)
-ROI_MIN_POINTS = 400
+# ylo=115 deliberately excludes the fast neck/channel jet below the cavity —
+# without this floor, ROI expansion (to hit ROI_MIN_POINTS on this sparse mesh)
+# pulls the shear layer back in and drags the detected center down to the neck.
+CENTER_ROI_UM = (60.0, 180.0, 115.0, 210.0)  # xlo, xhi, ylo, yhi  ← core confirmed near (x≈110,y≈130-140), left side of cavity (matches Fig. 2A)
+ROI_MIN_POINTS = 200  # this mesh has only ~2300 points total; 400 forced expansion into the jet
+
+# Manual override: skip auto-detection entirely, force the center to this (x,y) in µm. None = auto.
+CENTER_OVERRIDE_UM = (110.0, 150.0)
+
+# Manual override: force the Rankine core radius (µm) instead of using the calibrated value. None = auto.
+A_OVERRIDE_UM = 35.0
+
+# Manual override: force the circulation Γ (m^2/s) instead of using the calibrated value. None = auto.
+GAM_OVERRIDE = 7e-6
+
+# Stop the simulation once both bubbles reach this fraction of `a` from the center.
+# 0.15 (previous value) let bubbles collapse deep inside the core before stopping, so the
+# visible loops all happened at radius << a. Raising this to ~1.0 keeps the loops at radius >= a.
+CAPTURE_RADIUS_FRAC = 0.25  # tuned so both bubbles complete ~2 revolutions before the run stops
 ROI_EXPAND_STEP_UM = 20.0
 ROI_MAX_EXPANDS = 10
 Y_EXCLUDE_BELOW_FRAC = 0.25   # used only for global fallback
@@ -46,12 +63,12 @@ A_EDGE_FRACTION_MAX = 0.50    # tighter core
 A_EDGE_FRACTION_MIN = 0.05
 
 # Releases (absolute µm near the swirl)
-MB1_START_ABS_UM = (100.0, 120.0)
-MB2_START_ABS_UM = (140.0, 160.0)
+MB1_START_ABS_UM = (90.0, 110.0)
+MB2_START_ABS_UM = (120.0, 120.0)
 
 # Physics (SI)
 rho = 1000.0
-CD  = 4.0             # slightly lower drag → easier spiral-in
+CD  = 40000.0         # boosted ~4 orders of magnitude: confinement was ~40,000x stronger than drag at r~30um, swamping any real rotation
 PRESSURE_GAIN = 1.30  # >1 strengthens inward -∇p
 KNN_K = 12
 
@@ -73,6 +90,13 @@ TICK_FONTSIZE  = 12
 LEGEND_FONTSIZE= 11
 skip_interval  = 1
 quiver_scale   = 80
+
+# Frame export (for later video assembly, e.g. ffmpeg)
+SAVE_FRAMES = True
+FRAMES_DIR = "output_images_60cm"
+N_FRAMES_TARGET = 45     # approx. number of PNG frames to write across the whole run
+DPI_FRAME = 300
+MASK_RADIUS_UM = 3.0     # hide quiver arrows immediately under the MBs
 SHOW_GRID = True
 
 # ===================== GLOBALS (workers) =====================
@@ -243,17 +267,20 @@ def estimate_rankine_in_selection(df, xc, yc, idx_sel,
     rx,ry = dx/rs, dy/rs
     vt = -U*ry + V*rx
 
-    nbins=48
+    nbins=16  # this mesh is sparse (a few hundred points in-ROI); 48 bins @ min 20 pts/bin starved every bin to NaN
     bins = np.linspace(r.min(), r.max(), nbins+1)
     which = np.digitize(r, bins) - 1
     vt_abs_med = np.full(nbins,np.nan); r_med = np.full(nbins,np.nan)
     for i in range(nbins):
         m = (which==i)
-        if m.sum()>=20:
+        if m.sum()>=8:
             vt_abs_med[i]=np.median(np.abs(vt[m])); r_med[i]=np.median(r[m])
-    i_peak = int(np.nanargmax(vt_abs_med))
-    a_raw  = float(r_med[i_peak]) if np.isfinite(r_med[i_peak]) else float(np.median(r))
-    vt_a   = float(vt_abs_med[i_peak]) if np.isfinite(vt_abs_med[i_peak]) else float(np.median(np.abs(vt)))
+    if np.all(np.isnan(vt_abs_med)):
+        a_raw = float(np.median(r)); vt_a = float(np.median(np.abs(vt)))
+    else:
+        i_peak = int(np.nanargmax(vt_abs_med))
+        a_raw  = float(r_med[i_peak]) if np.isfinite(r_med[i_peak]) else float(np.median(r))
+        vt_a   = float(vt_abs_med[i_peak]) if np.isfinite(vt_abs_med[i_peak]) else float(np.median(np.abs(vt)))
 
     xmin,xmax = df['x'].min(), df['x'].max()
     ymin,ymax = df['y'].min(), df['y'].max()
@@ -284,7 +311,7 @@ def kNN_velocity_field(x,y,k):
     return np.array([u,v])
 
 def dp_dr_rankine(r, Gamma, rho, a):
-    if r < a: return (rho*Gamma**2)/(4*np.pi**2) * (r/(a*a))
+    if r < a: return (rho*Gamma**2)/(4*np.pi**2) * (r/(a**4))
     return (rho*Gamma**2)/(4*np.pi**2) * (1.0/(r**3))
 
 def grad_p_rankine(x,y,xc,yc,Gamma,rho,a):
@@ -311,7 +338,7 @@ out_of_bounds.terminal=True; out_of_bounds.direction=-1
 
 def reach_core(t,Y):
     r1=np.hypot(Y[0]-XC,Y[1]-YC); r2=np.hypot(Y[4]-XC,Y[5]-YC)
-    return min(r1,r2) - 0.15*A
+    return max(r1,r2) - CAPTURE_RADIUS_FRAC*A   # stop only once BOTH bubbles are near the core
 reach_core.terminal=True; reach_core.direction=-1
 
 # ===================== Diagnostics =====================
@@ -346,6 +373,60 @@ def save_center_diagnostic(vf, roi_m, xc, yc, a):
     ax.set_xlabel(f'X ({DISPLAY_POS_UNITS})'); ax.set_ylabel(f'Y ({DISPLAY_POS_UNITS})')
     fig.tight_layout(); fig.savefig('diagnostic_center.png'); plt.close(fig)
 
+# ===================== Frame export =====================
+def save_frames(vf, Y, xc, yc, a):
+    os.makedirs(FRAMES_DIR, exist_ok=True)
+    DISP_L=m_to_L(DISPLAY_POS_UNITS); DISP_V=mps_to(DISPLAY_VEL_UNITS)
+    X=vf['x'].to_numpy(float)*DISP_L; Yp=vf['y'].to_numpy(float)*DISP_L
+    U=vf['u'].to_numpy(float)*DISP_V; V=vf['v'].to_numpy(float)*DISP_V
+    idx=np.arange(X.size)[::max(1,skip_interval)]
+    Xs,Ys,Us,Vs=X[idx],Yp[idx],U[idx],V[idx]
+    mags=np.hypot(Us,Vs); mags=np.where(mags==0,1e-12,mags)
+    Un, Vn = Us/mags, Vs/mags
+    norm=plt.Normalize(mags.min(),mags.max())
+    colors = plt.cm.viridis(norm(mags))
+
+    tx1,ty1 = Y[0]*DISP_L, Y[1]*DISP_L
+    tx2,ty2 = Y[4]*DISP_L, Y[5]*DISP_L
+    n = tx1.size
+    frame_interval = max(1, n // N_FRAMES_TARGET)
+
+    frame_indices = list(range(0, n, frame_interval))
+    for i in frame_indices:
+        d1 = np.hypot(Xs - tx1[i], Ys - ty1[i])
+        d2 = np.hypot(Xs - tx2[i], Ys - ty2[i])
+        mask = (d1 > MASK_RADIUS_UM) & (d2 > MASK_RADIUS_UM)
+
+        fig, ax = plt.subplots(figsize=FIGSIZE, dpi=DPI_FRAME)
+        ax.quiver(Xs[mask], Ys[mask], Un[mask], Vn[mask], color=colors[mask], scale=quiver_scale, alpha=0.9)
+        cbar = fig.colorbar(plt.cm.ScalarMappable(norm=norm, cmap='viridis'), ax=ax)
+        cbar.set_label(f'Velocity Magnitude ({DISPLAY_VEL_UNITS})', fontsize=LABEL_FONTSIZE)
+
+        ax.plot(tx1[:i+1], ty1[:i+1], lw=3.0, color='r', label='MB1 path' if i==0 else None)
+        ax.plot(tx2[:i+1], ty2[:i+1], lw=3.0, color='b', label='MB2 path' if i==0 else None)
+        ax.plot(tx1[0], ty1[0], 'o', ms=7, color='r', label='start MB1' if i==0 else None)
+        ax.plot(tx2[0], ty2[0], 'o', ms=7, color='b', label='start MB2' if i==0 else None)
+        ax.plot(tx1[i], ty1[i], 'o', ms=8, markerfacecolor='none', markeredgecolor='r')
+        ax.plot(tx2[i], ty2[i], 'o', ms=8, markerfacecolor='none', markeredgecolor='b')
+        ax.add_patch(plt.Circle((xc*DISP_L, yc*DISP_L), a*DISP_L, ec='k', fc='none', lw=2))
+
+        ax.set_title('Velocity field + Two MB trajectories', fontsize=TITLE_FONTSIZE)
+        ax.set_xlabel(f'Position x ({DISPLAY_POS_UNITS})', fontsize=LABEL_FONTSIZE)
+        ax.set_ylabel(f'Position y ({DISPLAY_POS_UNITS})', fontsize=LABEL_FONTSIZE)
+        ax.tick_params(axis='both', labelsize=TICK_FONTSIZE)
+        ax.set_aspect('equal', 'box')
+        if SHOW_GRID: ax.grid(True, alpha=0.3)
+        ax.set_xlim(X.min(), X.max()); ax.set_ylim(Yp.min(), Yp.max())
+        handles, _ = ax.get_legend_handles_labels()
+        if handles:
+            ax.legend(loc='upper right', ncol=2, prop={'size': LEGEND_FONTSIZE})
+        fig.tight_layout()
+        fig.savefig(os.path.join(FRAMES_DIR, f"frame_{i:04d}.png"), dpi=DPI_FRAME, bbox_inches="tight")
+        plt.close(fig)
+
+    print(f"Saved {len(frame_indices)} frames to: {os.path.abspath(FRAMES_DIR)}")
+    print("Make video:\n  ffmpeg -framerate 15 -i frame_%04d.png -c:v libx264 -pix_fmt yuv420p output_video.mp4")
+
 # ===================== MAIN =====================
 def main():
     global TREE,UVAL,VVAL,XC,YC,A,GAM,RHO,CDG,RTOL,ATOL,XMIN,XMAX,YMIN,YMAX,MAX_STEP_LIMIT,NPTS
@@ -379,7 +460,11 @@ def main():
 
     # Center from swirling strength inside ROI
     XC, YC = center_from_swirlstrength(vf, idx_sel, k=KNN_K)
-    print(f"[Center (λ_ci, ROI)] (xc,yc)=({XC*1e6:.1f},{YC*1e6:.1f}) µm")
+    if CENTER_OVERRIDE_UM is not None:
+        XC, YC = CENTER_OVERRIDE_UM[0]*1e-6, CENTER_OVERRIDE_UM[1]*1e-6
+        print(f"[Center OVERRIDE] (xc,yc)=({XC*1e6:.1f},{YC*1e6:.1f}) µm")
+    else:
+        print(f"[Center (λ_ci, ROI)] (xc,yc)=({XC*1e6:.1f},{YC*1e6:.1f}) µm")
 
     # Calibrate a & Γ in selection
     A, GAM, T_swirl = estimate_rankine_in_selection(
@@ -388,6 +473,14 @@ def main():
         a_edge_frac_min=A_EDGE_FRACTION_MIN
     )
     print(f"[Calibrated in ROI] a≈{A*1e6:.1f} µm, Γ≈{GAM:.6g} m^2/s, Tθ≈{T_swirl:.4g} s")
+    if A_OVERRIDE_UM is not None:
+        T_swirl *= A_OVERRIDE_UM*1e-6 / A  # keep the same tangential speed at the (new) core edge
+        A = A_OVERRIDE_UM*1e-6
+        print(f"[a OVERRIDE] a={A*1e6:.1f} µm (Γ unchanged, Tθ rescaled to {T_swirl:.4g} s)")
+    if GAM_OVERRIDE is not None:
+        T_swirl *= GAM / GAM_OVERRIDE  # T_swirl ~ a/vt_a and vt_a scales with Γ, so T_swirl scales as 1/Γ
+        GAM = GAM_OVERRIDE
+        print(f"[Γ OVERRIDE] Γ={GAM:.6g} m^2/s (Tθ rescaled to {T_swirl:.4g} s)")
 
     # ---- TIME HORIZON: a few swirl periods (freeze fix) ----
     t0 = 0.0
@@ -463,6 +556,9 @@ def main():
                 pil_kwargs={"compress_level":1})
     plt.close(fig)
     print("Saved: velocity_Trajectory_two_mb.png  +  diagnostic_center.png")
+
+    if SAVE_FRAMES:
+        save_frames(vf, Y, XC, YC, A)
 
 # ---------------- entry ----------------
 if __name__ == "__main__":
