@@ -15,6 +15,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 trajectory_two_mb.csv
+trajectory_two_mb_trajectory_only.csv
 output_images/
 # C extensions
 *.so

@@ -35,7 +35,7 @@ rtol, atol = 1e-6, 1e-9
 chunk_steps_target = 400  # ~steps per chunk
 
 # Output
-output_dir      = "output_images"
+output_dir      = REPO_ROOT / "output_images_trajectory_only"
 CLEAR_OUTPUT_DIR = False  # wipe old frames first
 # ---- Trajectory-only export (no background) ----
 DRAW_CORE_CIRCLE      = True
@@ -227,7 +227,8 @@ def main():
     final_y = np.concatenate(final_y_list, axis=1)  # [x1,y1,u1,v1,x2,y2,u2,v2]
 
     # ---- SAVE TRAJECTORY CSV ----
-    traj_out = "trajectory_two_mb.csv"
+    (REPO_ROOT / "outputs").mkdir(exist_ok=True)
+    traj_out = REPO_ROOT / "outputs" / "trajectory_two_mb_trajectory_only.csv"
     traj_df = pd.DataFrame({
         "x1": final_y[0], "y1": final_y[1], "uMBx1": final_y[2], "uMBy1": final_y[3],
         "x2": final_y[4], "y2": final_y[5], "uMBx2": final_y[6], "uMBy2": final_y[7],
@@ -254,20 +255,24 @@ def main():
     ax.set_aspect('equal', 'box'); ax.set_xlim(xmin, xmax); ax.set_ylim(ymin, ymax)
     if HIDE_AXES: ax.axis('off')
     fig.tight_layout(pad=0)
+    (REPO_ROOT / "plotting").mkdir(exist_ok=True)
+    traj_only_png = REPO_ROOT / "plotting" / "trajectory_only.png"
+    traj_only_svg = REPO_ROOT / "plotting" / "trajectory_only.svg"
     try:
-        fig.savefig("trajectory_only.png", dpi=TRAJ_ONLY_DPI, bbox_inches='tight',
+        fig.savefig(traj_only_png, dpi=TRAJ_ONLY_DPI, bbox_inches='tight',
                     pad_inches=0, transparent=TRAJ_BG_TRANSPARENT,
                     pil_kwargs={"compress_level": 1})
-        print(f"Saved: {os.path.abspath('trajectory_only.png')}")
+        print(f"Saved: {traj_only_png}")
     except Exception as e:
         if SAVE_JPG_FALLBACK:
-            fig.savefig("trajectory_only.jpg", dpi=TRAJ_ONLY_DPI, bbox_inches='tight', pad_inches=0)
-            print(f"PNG failed ({e}). Saved JPG: {os.path.abspath('trajectory_only.jpg')}")
+            traj_only_jpg = REPO_ROOT / "plotting" / "trajectory_only.jpg"
+            fig.savefig(traj_only_jpg, dpi=TRAJ_ONLY_DPI, bbox_inches='tight', pad_inches=0)
+            print(f"PNG failed ({e}). Saved JPG: {traj_only_jpg}")
         else:
             raise
     # also export vector (crisp & tiny)
-    fig.savefig("trajectory_only.svg", bbox_inches='tight', pad_inches=0, transparent=TRAJ_BG_TRANSPARENT)
-    print(f"Saved: {os.path.abspath('trajectory_only.svg')}")
+    fig.savefig(traj_only_svg, bbox_inches='tight', pad_inches=0, transparent=TRAJ_BG_TRANSPARENT)
+    print(f"Saved: {traj_only_svg}")
     plt.close(fig)
 
     # 2) OPTIONAL: PER-STEP TRAJECTORY-ONLY FRAMES

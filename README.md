@@ -96,7 +96,8 @@ Two more top-level folders keep run artifacts out of the repo root:
 | Manuscript figure | Source |
 |---|---|
 | Fig. 2B — velocity profile, polar plot | [`plotting/Plotting_filling_Aneurysm.ipynb`](plotting/Plotting_filling_Aneurysm.ipynb) cells 22–23 ← `PIV_Velocity_Vortex_center.csv` |
-| Fig. 2D–E — simulated MB capture | [`scripts/figures/two_microbubble_capture.py`](scripts/figures/two_microbubble_capture.py) |
+| Fig. 2D — trajectory-only capture panels | [`scripts/figures/two_microbubble_trajectory_only.py`](scripts/figures/two_microbubble_trajectory_only.py) |
+| Fig. 2E — velocity field + capture trajectory | [`scripts/figures/two_microbubble_capture.py`](scripts/figures/two_microbubble_capture.py) |
 | Fig. 2E inset — Rankine pressure well | [`scripts/figures/rankine_schematic.py`](scripts/figures/rankine_schematic.py) |
 | Fig. 3F — cluster area at ejection | notebook cells 12–16, 21 ← `Bubble_shooting[_updated].csv` |
 | Fig. 3G — US on/off control | notebook cells 10–11 |
