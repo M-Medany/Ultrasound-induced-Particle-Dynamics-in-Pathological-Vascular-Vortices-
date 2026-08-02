@@ -17,8 +17,6 @@ Code and data accompanying the manuscript:
 
 In physiological aneurysm-like microfluidic models, clinically approved microbubbles (MBs) under ultrasound migrate into vortex cores, self-cluster through acoustic interactions, and — on reaching a critical aggregate size (~15 µm) — are expelled and anchor at the cavity wall. Repetition of this **capture → growth → ejection → anchoring** cycle fills aneurysm-like cavities on a seconds timescale.
 
-![Microbubble trapping at the vortex eye](Videos/Bubblu_vortex_20fps.gif)
-
 This repository contains the theoretical-model implementation, the experimental tracking code, and the post-processing that produces the published figures.
 
 ---
@@ -35,7 +33,7 @@ Animated previews are shown below; full-resolution MP4 versions are in [`Videos/
 
 **Movie 2** | Ultrasound-driven microbubble convergence to the vortex eye. Two microbubbles recirculate within the aneurysm cavity under continuous ultrasound. Both progressively spiral inward and converge at the vortex eye, where they become trapped.
 
-<img src="Videos/Movie_3.gif" width="720">
+<img src="Videos/Microbubble_2_trajectory.gif" width="720">
 
 **Movie 3** | Simulated microbubble trajectories within a vortex flow field. Two microbubbles released from distinct entry positions are numerically simulated within a COMSOL-derived velocity field of the aneurysm cavity. The trajectories reproduce inward spiralling and convergence to the vortex eye under ultrasound forcing.
 
@@ -76,8 +74,6 @@ $$\dot{\mathbf{x}}_i = \mathbf{v}_i, \qquad \dot{\mathbf{v}}_i = -\frac{3}{\rho}
 where $\mathbf{u}_f$ is the measured carrier field, $p_{\text{rank}}$ the Rankine pressure surrogate (Eq. S3), $C_D$ an effective quadratic drag constant, and $\rho$ the fluid density. This reproduces inward spiralling and convergence to the vortex eye across entry angles (Fig. 2D–E).
 
 **Implementation:** carrier field interpolated by inverse-distance k-nearest neighbours (k = 8) over a `scipy.spatial.cKDTree`; vortex centre found by minimising the radial velocity component; integration by `solve_ivp` (RK45, `rtol=1e-6`, `atol=1e-9`), terminating if a bubble leaves the measured domain. The time horizon is split into CPU-count subintervals integrated sequentially, each seeded from the previous terminal state (Windows spawn-safety; bounds step size). Output is `outputs/trajectory_two_mb.csv`.
-
-![Simulated two-microbubble capture](Videos/Microbubble_2_trajectory.gif)
 
 ---
 
