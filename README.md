@@ -23,6 +23,17 @@ This repository contains the theoretical-model implementation, the experimental 
 
 ---
 
+## Supplementary videos
+
+The manuscript movies are in [`Videos/`](Videos/). They embed and play inline when this
+page is viewed on **github.com** (they appear as download links elsewhere).
+
+**Movie 8**
+
+<video src="https://github.com/M-Medany/Ultrasound-induced-Particle-Dynamics-in-Pathological-Vascular-Vortices-/raw/main/Videos/Movie%208.mp4" controls width="640"></video>
+
+---
+
 ## Model
 
 The complete formulation — force balance, Rankine confinement, and the ejection criterion — is given in **Supporting Information, Notes 1–2 (Eqs. S1–S5)** of the manuscript. This section covers only what the code implements.
