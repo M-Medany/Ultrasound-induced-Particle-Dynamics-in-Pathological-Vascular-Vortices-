@@ -30,7 +30,10 @@ page is viewed on **github.com** (they appear as download links elsewhere).
 
 **Movie 8**
 
-<video src="https://github.com/M-Medany/Ultrasound-induced-Particle-Dynamics-in-Pathological-Vascular-Vortices-/raw/main/Videos/Movie%208.mp4" controls width="640"></video>
+<video controls width="640">
+  <source src="https://raw.githubusercontent.com/M-Medany/Ultrasound-induced-Particle-Dynamics-in-Pathological-Vascular-Vortices-/main/Videos/Movie_8.mp4" type="video/mp4">
+  <a href="https://raw.githubusercontent.com/M-Medany/Ultrasound-induced-Particle-Dynamics-in-Pathological-Vascular-Vortices-/main/Videos/Movie_8.mp4">Download Movie 8</a>
+</video>
 
 ---
 
