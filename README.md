@@ -27,39 +27,39 @@ This repository contains the theoretical-model implementation, the experimental 
 
 Animated previews are shown below; full-resolution MP4 versions are in [`Videos/`](Videos/).
 
-<img src="Videos/Movie_1.gif" width="600">
+<img src="Videos/Movie_1.gif" width="720">
 
 **Movie 1** | Flow structure within the aneurysm cavity under continuous and pulsatile conditions. Flow within the aneurysm cavity at an inlet velocity of 60 cm s⁻¹ is shown at 0.2× real time. High-speed imaging (0.01× real time) resolves 1 µm tracer particles, revealing intracavity recirculation and vortex formation. A side-by-side comparison of continuous (left) and pulsatile (right) flow highlights vortex persistence under both conditions.
 
-<img src="Videos/Movie_2.gif" width="600">
+<img src="Videos/Movie_2.gif" width="720">
 
 **Movie 2** | Ultrasound-driven microbubble convergence to the vortex eye. Two microbubbles recirculate within the aneurysm cavity under continuous ultrasound. Both progressively spiral inward and converge at the vortex eye, where they become trapped.
 
-<img src="Videos/Movie_3.gif" width="600">
+<img src="Videos/Movie_3.gif" width="720">
 
 **Movie 3** | Simulated microbubble trajectories within a vortex flow field. Two microbubbles released from distinct entry positions are numerically simulated within a COMSOL-derived velocity field of the aneurysm cavity. The trajectories reproduce inward spiralling and convergence to the vortex eye under ultrasound forcing.
 
-<img src="Videos/Movie_4.gif" width="600">
+<img src="Videos/Movie_4.gif" width="720">
 
 **Movie 4** | Microbubble clustering and ejection from the vortex eye. Multiple microbubbles enter the aneurysm cavity under continuous ultrasound and are drawn into the vortex eye, where they progressively cluster. Doublets, triplets, and larger aggregates form within the low-shear core. As the cluster approaches a critical radius (~15 µm), confinement destabilizes and the aggregate is abruptly ejected from the vortex eye, exiting the recirculation zone. Ultrasound remains on throughout.
 
-<img src="Videos/Movie_5.gif" width="600">
+<img src="Videos/Movie_5.gif" width="720">
 
 **Movie 5** | Microbubble trapping in mouse blood under ultrasound. Microbubbles dispersed in anticoagulated mouse blood are introduced into the aneurysm cavity under continuous flow. Upon ultrasound activation, microbubbles are drawn into the vortex eye, where they cluster and remain trapped, while blood cells predominantly follow streamlines and bypass the trapping region. Ultrasound remains on throughout.
 
-<img src="Videos/Movie_6.gif" width="600">
+<img src="Videos/Movie_6.gif" width="720">
 
 **Movie 6** | Repeated microbubble cluster ejection from the vortex eye. High-speed imaging captures the ejection dynamics of microbubble clusters under continuous ultrasound. Clusters assemble at the vortex eye, grow through recruitment, and are abruptly expelled from the core. The sequence illustrates repeated capture–growth–ejection cycles under sustained acoustic excitation.
 
-<img src="Videos/Movie_7.gif" width="600">
+<img src="Videos/Movie_7.gif" width="720">
 
 **Movie 7** | Ultrasound on/off control of microbubble trapping. Microbubble behaviour within the aneurysm cavity is shown at 0.2× real time. With ultrasound on, microbubbles cluster at the vortex eye. When ultrasound is switched off, clusters disperse and microbubbles leave the core following background recirculation. Reapplication of ultrasound restores clustering.
 
-<img src="Videos/Movie_8.gif" width="600">
+<img src="Videos/Movie_8.gif" width="720">
 
 **Movie 8** | Progressive aneurysm cavity filling under pulsatile flow. A high-concentration microbubble suspension is introduced under pulsatile flow in the main channel (60–90 cm s⁻¹). With continuous ultrasound, microbubbles are redirected into the cavity, captured at the moving vortex eye, and accumulate along the inner wall. Repeated capture–growth–ejection cycles lead to progressive cavity filling.
 
-<img src="Videos/Movie_9.gif" width="600">
+<img src="Videos/Movie_9.gif" width="720">
 
 **Movie 9** | Ultrasound-guided microbubble accumulation in a millimeter-scale aneurysm sac. A three-dimensional, millimeter-scale aneurysm sac is exposed to continuous ultrasound. Microbubbles are guided into the cavity, where they accumulate and progressively occupy the sac volume, illustrating partial volumetric filling under sustained acoustic excitation.
 
