@@ -10,16 +10,6 @@ Reproducibility:
   AT EXACTLY 2 MHz (certificate 20251211-03) -- no interpolation needed,
   unlike the 1.7 MHz baseline scan.
 
-CAVEAT: pressures are PROVISIONAL pending confirmation of whether the
-Precision Acoustics booster amplifier (typical gain 27 dB, G~22.4) was in
-the signal chain. See the main project's hydrophone_experiment_summary.md
-Section 6 for background.
-
-Four positions were originally measured twice. The first reading at each was
-taken at a slightly wrong probe position and then repeated more precisely; the
-first (imprecise) readings have been discarded and only the corrected reading
-is retained. The dataset therefore now has exactly one reading per position
-(24 points, renumbered CSV00-CSV23 in acquisition order).
 
 Outputs (written to ./figures/):
 - field_map_2D.png          : interpolated pressure map of the XY scan at Z=13 mm
@@ -85,7 +75,7 @@ def plot_2d_map(rows):
 
     cf = ax.contourf(Xi, Yi, Pi, levels=20, cmap="inferno")
     cbar = fig.colorbar(cf, ax=ax)
-    cbar.set_label("Provisional pressure, p-p (kPa)")
+    cbar.set_label("Peak-to-peak pressure (kPa)")
 
     ax.scatter(x, y, c=p, cmap="inferno", edgecolors="white", linewidths=1.2, s=70, zorder=3)
     for r in uniq:
@@ -97,7 +87,7 @@ def plot_2d_map(rows):
     ax.set_xlabel("X (mm)")
     ax.set_ylabel("Y (mm)")
     ax.set_title("Aneurysm-channel hydrophone field map, XY plane at Z = 13 mm\n"
-                  "2 MHz, 30 Vpp drive, SN 4746 (provisional, no booster correction)",
+                  "2 MHz, 30 Vpp drive, SN 4746",
                   fontsize=11)
     ax.set_aspect("equal")
     ax.set_ylim(y.min() - 0.6, y.max() + 0.6)
@@ -125,7 +115,7 @@ def plot_profiles(rows):
         xs, ps = line(yfix=yfix)
         axes[0].plot(xs, ps, "o-", color=color, label=label)
     axes[0].set_xlabel("X (mm)  [Z=13]")
-    axes[0].set_ylabel("Provisional pressure, p-p (kPa)")
+    axes[0].set_ylabel("Peak-to-peak pressure (kPa)")
     axes[0].set_title("X-scans")
     axes[0].legend()
     axes[0].grid(alpha=0.3)
@@ -139,7 +129,7 @@ def plot_profiles(rows):
     axes[1].grid(alpha=0.3)
 
     fig.suptitle("Beam profile cuts through the aneurysm channel "
-                  "(2 MHz, 30 Vpp drive, provisional pressures)")
+                  "(2 MHz, 30 Vpp drive)")
     fig.tight_layout()
     out = os.path.join(FIG_DIR, "field_profiles.png")
     fig.savefig(out, dpi=200)

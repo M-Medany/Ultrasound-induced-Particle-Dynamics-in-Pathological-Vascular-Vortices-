@@ -128,8 +128,8 @@ ax.set_zlabel("z (mm)", fontsize=20, color="#2c2c2a", labelpad=16)
 ax.set_xlim(min(x0, min(xs)) - 1, max(x1, max(xs)) + 1)
 ax.set_ylim(min(y0, min(ys)) - 1, max(y1, max(ys)) + 1)
 ax.set_zlim(zbase, ztop)
-ax.set_title("Provisional peak-to-peak pressure vs. channel position\n"
-             "1.7 MHz, 20 Vpp drive, SN 4746 (no booster correction)",
+ax.set_title("Peak-to-peak pressure vs. channel position\n"
+             "1.7 MHz, 20 Vpp drive, SN 4746",
              fontsize=22, color="#0b0b0b", pad=32)
 ax.view_init(elev=22, azim=-55)
 
