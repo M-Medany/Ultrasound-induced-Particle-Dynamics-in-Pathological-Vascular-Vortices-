@@ -43,6 +43,14 @@ P_pp [kPa] = P_pp[bar] × 100  =  Vpp[mV] / 3.7
   Z-line (x = 10, y = 11) through a shared point — not a dense volumetric grid.
 - Channel box dimensions in `plot_field.py` are still provisional/estimated.
 
+## Result
+
+![RP 71s quasi-2D peak-to-peak pressure scatter](figures/field_scatter_3D.png)
+
+*Peak-to-peak pressure at the 15 scan points (channel-box view). Pressures use
+the out-of-band S = 3.7 mV/bar — see caveats above. (RP 71s sensitivity curve to
+be added.)*
+
 Coordinate origin = upper-right corner of the transducer; centered coordinates
 `X = x − 10`, `Y = y − 7.5` (mm). See the paper and its supplementary note for
 full experimental context.

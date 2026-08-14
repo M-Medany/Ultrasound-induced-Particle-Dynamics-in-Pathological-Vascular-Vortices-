@@ -4,6 +4,13 @@ Needle-hydrophone spatial scan of the transducer field through the 3D aneurysm
 channel, single XY plane at Z = 13 mm, 2 MHz / 30 Vpp, in water.
 Precision Acoustics hydrophone SN 4746, 50 Ω termination.
 
+## Field map
+
+![Aneurysm-channel peak-to-peak pressure field map at Z = 13 mm](figures/field_map_2D.png)
+
+*Interpolated peak-to-peak pressure across the scanned plane (see also
+`figures/field_profiles.png`).*
+
 ## Contents
 
 - `raw_csv/` — 24 raw oscilloscope waveforms, `CSV{n}_X{x}_Y{y}_Z{z}.csv`

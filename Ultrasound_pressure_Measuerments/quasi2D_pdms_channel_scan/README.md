@@ -3,6 +3,13 @@
 Needle-hydrophone spatial scan of the transducer field, 1.7 MHz / 20 Vpp, in water.
 Precision Acoustics hydrophone SN 4746, 50 Ω termination.
 
+## Field map
+
+![Quasi-2D channel peak-to-peak pressure field map at Z = 6 mm](figures/field_map_2D.png)
+
+*Interpolated peak-to-peak pressure across the scanned plane (see also
+`figures/field_profiles.png` and `figures/field_scatter_3D_channel_style.png`).*
+
 ## Contents
 
 - `raw_csv/` — 19 raw oscilloscope waveforms, `CSV{n}_X{x}_Y{y}_Z{z}.csv`
