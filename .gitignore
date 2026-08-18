@@ -4,6 +4,9 @@
 
 #ignor folder
 output_images*
+# Assembled supplementary videos -- too large for a normal git push (GitHub's
+# 100MB hard limit); keep these local, compress before ever committing one.
+plotting/*.mp4
 Swarm_trajectory
 Solar_results
 Animation
