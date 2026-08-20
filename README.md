@@ -161,6 +161,13 @@ Two more top-level folders keep run artifacts out of the repo root:
 
 ---
 
+## Additional characterization
+
+- **PDMS wall compliance / cavity volume change** — soft-PDMS (15:1 curing ratio) devices show measurable cavity wall pulsation under flow. `scripts/tracking/pdms_wall_expansion.py`, `pdms_volume_change.py`, and `pdms_process_new_crops.py` track the cavity boundary frame-by-frame from high-speed video (sub-pixel radial edge detection) and compute cross-sectional area over time as a volume-change proxy. Data in [`data/pdms/`](data/pdms/), notebook in [`plotting/PDMS_volume_change_plotting.ipynb`](plotting/PDMS_volume_change_plotting.ipynb), figures in `plotting/pdms_figures/`.
+- **Hydrophone acoustic-pressure mapping** — pressure field scans (3D aneurysm channel and quasi-2D PDMS/RP71s channel geometries) characterizing the acoustic field driving the device. Raw data and per-scan READMEs in [`Ultrasound_pressure_Measuerments/`](Ultrasound_pressure_Measuerments/), plotting notebook in [`plotting/Hydrophone_field_plotting.ipynb`](plotting/Hydrophone_field_plotting.ipynb), figures in `plotting/hydrophone_figures/`.
+
+---
+
 ## Citation
 
 The manuscript is currently under review. Until a formal publication record is available, please cite the preprint:

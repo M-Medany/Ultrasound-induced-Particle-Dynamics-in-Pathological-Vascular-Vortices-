@@ -1,6 +1,7 @@
 # Custom
 /junk
 /literature
+.DS_Store
 
 #ignor folder
 output_images*
@@ -11,6 +12,13 @@ Swarm_trajectory
 Solar_results
 Animation
 Swarm_trajectory_viridis
+# Raw high-speed TIFF frame-sequence folders dropped at repo root for PDMS
+# wall-tracking analysis -- large raw data, not meant for git (tracked
+# outputs live in outputs/ and plotting/ instead).
+vid_2023-09-06_21-10-03-1_Real_Time/
+vid_2026-08-09_20-15-21-2_realtime/
+New_vid_2026-08-09_20-15-21-2_realtime/
+vid_2026-08-10_01-05-57-1_real_time/
 
 __pycache__
 # Byte-compiled / optimized / DLL files

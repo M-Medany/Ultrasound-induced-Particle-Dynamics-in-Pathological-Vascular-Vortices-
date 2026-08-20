@@ -1,8 +1,7 @@
-# One-off processing of the two newly-added, tighter-crop TIFF sequences for
-# video 1 and video 5 (added directly at repo root: "...realtime" folders).
-# These are a DIFFERENT pixel scale than the originally-analyzed frames (verified:
-# same 300um cavity measures ~267-268px here vs ~230px in the original wide-FOV
-# recording), so each crop is calibrated independently from its own cavity radius.
+# One-off processing of newly-added, tighter-crop TIFF sequences (added directly
+# at repo root as "...realtime"/"...Real_Time" folders). Each has a DIFFERENT
+# pixel scale than the originally-analyzed frames (verified per-video from its
+# own cavity radius), so each crop is calibrated independently.
 #
 # For each video, produces:
 #   - outputs/pdms_<name>_volume_change.csv / plotting/pdms_<name>_volume_change.png
@@ -42,10 +41,28 @@ JOBS = {
         min_prominence=6, min_width_px=8,
         ref_radius_px=264.5,
     ),
+    "vid2023sep": dict(
+        # Different (older, 2023) recording, captured at 20 FPS (confirmed by
+        # user) -- NOT 100 FPS like the other two.
+        folder="vid_2023-09-06_21-10-03-1_Real_Time",
+        fps=20.0,
+        pattern="*.tif",
+        cx=481, cy=470, r0=400, r1=510,
+        exclude_deg=[(45, 130)],  # neck opening into the straight channel
+        # Lower contrast than vid1crop and, critically, a gas pocket that GROWS
+        # over the sequence and swallows the upper-cavity trough signal (visually
+        # confirmed: frame 0 has a small dark corner patch, frame ~1531 has it
+        # covering the whole upper half) -- coverage genuinely declines late in
+        # the sequence rather than this being a threshold-tuning artifact.
+        min_prominence=10, min_width_px=6,
+        min_coverage=0.20,
+        ref_radius_px=447.25,
+    ),
 }
 
 def run(name, cfg):
     t0 = time.time()
+    fps = cfg.get("fps", FPS)
     px_per_um = 2 * cfg["ref_radius_px"] / 300.0
     print(f"\n=== {name}: {cfg['folder']}  (calibration: {px_per_um:.4f} px/um) ===")
 
@@ -70,19 +87,19 @@ def run(name, cfg):
             x = cfg["cx"] + r * np.cos(theta); y = cfg["cy"] + r * np.sin(theta)
             cv2.circle(vis, (int(round(x)), int(round(y))), 3, (0, 60, 255), -1)
 
-        if len(angles) >= v.N_ANGLES * 0.4:
+        if len(angles) >= v.N_ANGLES * cfg.get("min_coverage", 0.4):
             area_px2, coverage = v.polar_area(angles, radii, v.N_ANGLES)
             area_mm2 = area_px2 / px_per_um**2 / 1e6
-            label = f"t = {i/FPS:5.2f} s   area = {area_mm2:.4f} mm2"
+            label = f"t = {i/fps:5.2f} s   area = {area_mm2:.4f} mm2"
         else:
             area_px2, coverage, area_mm2 = np.nan, len(angles)/v.N_ANGLES, np.nan
-            label = f"t = {i/FPS:5.2f} s   area = n/a"
+            label = f"t = {i/fps:5.2f} s   area = n/a"
 
         cv2.putText(vis, label, (15, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255,255,255), 3, cv2.LINE_AA)
         cv2.putText(vis, label, (15, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,0,0), 1, cv2.LINE_AA)
         cv2.imwrite(f"{out_dir}/frame_{i:04d}.png", vis)
 
-        rows.append({"frame": i, "time_s": i/FPS, "area_px2": area_px2,
+        rows.append({"frame": i, "time_s": i/fps, "area_px2": area_px2,
                       "area_mm2": area_mm2, "coverage": coverage})
         if i % 200 == 0:
             print(f"  frame {i}/{len(files)}  ({time.time()-t0:.0f}s elapsed)")
@@ -109,5 +126,6 @@ def run(name, cfg):
     print(f"Saved: outputs/pdms_{name}_volume_change.csv, plotting/pdms_{name}_volume_change.png, {out_dir}/")
 
 if __name__ == "__main__":
-    for name, cfg in JOBS.items():
-        run(name, cfg)
+    names = sys.argv[1:] or list(JOBS.keys())
+    for name in names:
+        run(name, JOBS[name])
